@@ -1,10 +1,6 @@
-import React from 'react';
 import { Card, Row, Col, Statistic, Progress, Typography, Tag, Space, Avatar, List } from 'antd';
 import {
-  UserOutlined,
   FileTextOutlined,
-  AimOutlined,
-  QuestionCircleOutlined,
   FireOutlined,
   ClockCircleOutlined,
   RiseOutlined,

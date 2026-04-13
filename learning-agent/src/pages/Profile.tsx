@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, Typography, Tag, Space, Button, Modal, Form, Input, Select, Slider, Progress, message, Row, Col, Descriptions, Avatar } from 'antd';
 import { UserOutlined, EditOutlined, SaveOutlined, ReloadOutlined } from '@ant-design/icons';
-import { initialProfile, agents } from '../data/mockData';
+import { initialProfile } from '../data/mockData';
 import type { StudentProfile, ProfileDimension } from '../types';
 
 const { Title, Text } = Typography;

@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { Card, Typography, Tag, Space, Button, Row, Col, List, Avatar, Input, Badge, Tabs, Modal, message } from 'antd';
+import { useState } from 'react';
+import { Card, Typography, Tag, Space, Button, Row, Col, List, Avatar, Input, Badge, Tabs, message } from 'antd';
 import {
-  QuestionCircleOutlined,
   RobotOutlined,
   FileTextOutlined,
   PictureOutlined,
@@ -19,7 +18,6 @@ const { TextArea } = Input;
 const Tutor: React.FC = () => {
   const [question, setQuestion] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [currentAnswer, setCurrentAnswer] = useState<QAItem | null>(null);
   const [history, setHistory] = useState<QAItem[]>([
     {
       id: '1',
@@ -199,7 +197,7 @@ const Tutor: React.FC = () => {
                     }
                     description={
                       <Space>
-                        <Tag size="small" color={item.helpful ? 'success' : 'default'}>
+                        <Tag color={item.helpful ? 'success' : 'default'}>
                           {item.helpful ? '有帮助' : '待评价'}
                         </Tag>
                         <Button
@@ -223,26 +221,6 @@ const Tutor: React.FC = () => {
           </Card>
         </Col>
       </Row>
-
-      {/* 解答展示 */}
-      {currentAnswer && (
-        <Card title="解答详情" style={{ marginTop: 24 }}>
-          <Space direction="vertical" style={{ width: '100%' }}>
-            <Text strong>{currentAnswer.question}</Text>
-            <div style={{ padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
-              <pre style={{ whiteSpace: 'pre-wrap' }}>{currentAnswer.answer}</pre>
-            </div>
-            <Space>
-              <Button icon={<LikeOutlined />} onClick={() => handleFeedback(currentAnswer.id, true)}>
-                有帮助
-              </Button>
-              <Button icon={<DislikeOutlined />} onClick={() => handleFeedback(currentAnswer.id, false)}>
-                待改进
-              </Button>
-            </Space>
-          </Space>
-        </Card>
-      )}
     </div>
   );
 };

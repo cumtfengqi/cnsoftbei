@@ -1,16 +1,14 @@
-import React, { useState } from 'react';
-import { Card, Typography, Tag, Space, Button, Row, Col, Steps, Progress, Timeline, List, Avatar, Collapse, message } from 'antd';
+import { useState } from 'react';
+import { Card, Typography, Tag, Space, Button, Row, Col, Steps, Progress, List, Avatar, Collapse } from 'antd';
 import {
-  AimOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
   PlayCircleOutlined,
   FileTextOutlined,
   PlaySquareOutlined,
- BulbOutlined,
+  BulbOutlined,
 } from '@ant-design/icons';
 import { mockLearningPath, mockResources } from '../data/mockData';
-import type { LearningNode } from '../types';
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
@@ -105,7 +103,7 @@ const Path: React.FC = () => {
               activeKey={activeNode}
               onChange={(keys) => setActiveNode(keys[0] as string)}
             >
-              {pathData.nodes.map((node, index) => (
+              {pathData.nodes.map((node) => (
                 <Panel
                   key={node.id}
                   header={

@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
-  Card, Typography, Tag, Space, Button, Row, Col, Progress, 
-   List, Avatar, Statistic, Timeline, message
+  Card, Typography, Tag, Space, Row, Col, Progress,
+  List, Avatar, Statistic, Timeline
 } from 'antd';
-import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import {
   DashboardOutlined,
   RiseOutlined,
@@ -15,7 +14,6 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons';
 import { mockAssessments, mockLearningPath } from '../data/mockData';
-import type { LearningAssessment } from '../types';
 
 const { Title, Text } = Typography;
 
@@ -43,13 +41,6 @@ const Assessment: React.FC = () => {
         return 'default';
     }
   };
-
-  // 雷达图数据
-  const radarData = assessments.map(a => ({
-    dimension: a.dimension,
-    score: a.score,
-    fullMark: 100,
-  }));
 
   // 计算总体评分
   const overallScore = Math.round(assessments.reduce((sum, a) => sum + a.score, 0) / assessments.length);
