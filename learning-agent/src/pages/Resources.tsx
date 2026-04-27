@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import { multiAgentScheduler, resourceGenerator, type AgentRole } from '../services/multiAgentFramework';
 import type { ResourceType } from '../types';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -27,6 +28,50 @@ const resourceTypeConfig: Record<ResourceType, { icon: React.ReactNode; color: s
   codeCase: { icon: <CodeOutlined />, color: '#13c2c2', label: '代码案例', desc: '实战项目、代码案例' },
 };
 
+// 流式内容卡片组件
+const StreamingContentCard: React.FC<{
+  type: ResourceType;
+  content: string;
+  isStreaming: boolean;
+}> = ({ type, content, isStreaming }) => {
+  const config = resourceTypeConfig[type];
+
+  return (
+    <Card
+      size="small"
+      style={{ borderTop: `3px solid ${config.color}` }}
+      title={
+        <Space>
+          {config.icon}
+          <span>{config.label}</span>
+          {isStreaming && <Tag color="processing" icon={<LoadingOutlined />}>生成中</Tag>}
+          {!isStreaming && <Tag color="success">已完成</Tag>}
+        </Space>
+      }
+      extra={<Tag icon={<RobotOutlined />}>资源生成智能体</Tag>}
+    >
+      <div
+        style={{
+          background: type === 'codeCase' ? '#1e1e1e' : type === 'mindmap' ? '#f5f5f5' : '#fafafa',
+          padding: 16,
+          borderRadius: 8,
+          maxHeight: 400,
+          overflow: 'auto',
+        }}
+      >
+        {content ? (
+          <MarkdownRenderer content={content} />
+        ) : (
+          <span style={{ color: '#999' }}>正在生成...</span>
+        )}
+        {isStreaming && (
+          <span style={{ display: 'inline-block', width: 8, height: 16, background: '#1890ff', marginLeft: 2, animation: 'blink 1s infinite' }} />
+        )}
+      </div>
+    </Card>
+  );
+};
+
 const Resources: React.FC = () => {
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState<Record<ResourceType, number>>({} as Record<ResourceType, number>);
@@ -35,7 +80,11 @@ const Resources: React.FC = () => {
   const [selectedTypes, setSelectedTypes] = useState<ResourceType[]>([]);
   const [learningNeed, setLearningNeed] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [displayedResources, setDisplayedResources] = useState<{ type: ResourceType; content: string }[]>([]);
+
+  // 流式内容状态
+  const [streamingContent, setStreamingContent] = useState<Record<ResourceType, string>>({} as Record<ResourceType, string>);
+  const [streamingType, setStreamingType] = useState<ResourceType | null>(null);
+  const [isComplete, setIsComplete] = useState(false);
 
   const [form] = Form.useForm();
 
@@ -45,7 +94,6 @@ const Resources: React.FC = () => {
     return agent?.status || 'idle';
   };
 
-  // 获取智能体状态颜色
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'thinking': return '#1890ff';
@@ -56,7 +104,6 @@ const Resources: React.FC = () => {
     }
   };
 
-  // 获取智能体状态图标
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'thinking': return <LoadingOutlined />;
@@ -66,19 +113,16 @@ const Resources: React.FC = () => {
     }
   };
 
-  // 打开配置弹窗
   const handleOpenModal = () => {
     setIsModalOpen(true);
   };
 
-  // 关闭配置弹窗
   const handleCloseModal = () => {
     setIsModalOpen(false);
   };
 
   // 开始生成资源
   const startGeneration = async () => {
-    // 验证
     if (selectedTypes.length === 0) {
       message.warning('请至少选择一种资源类型');
       return;
@@ -92,29 +136,33 @@ const Resources: React.FC = () => {
     setGenerating(true);
     setProgress({} as Record<ResourceType, number>);
     setError(null);
-    setDisplayedResources([]);
+    setStreamingContent({} as Record<ResourceType, string>);
+    setStreamingType(null);
+    setIsComplete(false);
 
     try {
       setCurrentStep('初始化多智能体协同框架...');
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      // 调用资源生成服务
-      const results = await resourceGenerator.generateResources(
+      // 使用流式生成
+      await resourceGenerator.generateResources(
         selectedTypes,
         learningNeed,
         (type, step, p) => {
           setProgress(prev => ({ ...prev, [type]: p }));
           setCurrentStep(`${resourceTypeConfig[type].label} - ${step}`);
+        },
+        (type, delta) => {
+          // 流式更新内容
+          setStreamingType(type);
+          setStreamingContent(prev => ({
+            ...prev,
+            [type]: (prev[type] || '') + delta,
+          }));
         }
       );
 
-      // 将结果转换为数组用于展示
-      const resourcesArray = Object.entries(results).map(([type, content]) => ({
-        type: type as ResourceType,
-        content,
-      }));
-      setDisplayedResources(resourcesArray);
-
+      setIsComplete(true);
       message.success('资源生成完成！');
     } catch (err: any) {
       console.error('Generation failed:', err);
@@ -122,72 +170,8 @@ const Resources: React.FC = () => {
       message.error('资源生成失败');
     } finally {
       setGenerating(false);
+      setStreamingType(null);
     }
-  };
-
-  // 渲染生成的资源内容
-  const renderResourceContent = (type: ResourceType, content: string) => {
-    if (type === 'mindmap') {
-      return (
-        <pre style={{
-          background: '#f5f5f5',
-          padding: 16,
-          borderRadius: 8,
-          overflow: 'auto',
-          maxHeight: 400,
-          fontSize: 12,
-          whiteSpace: 'pre-wrap',
-        }}>
-          {content}
-        </pre>
-      );
-    }
-
-    if (type === 'quiz') {
-      return (
-        <div style={{
-          background: '#f5f5f5',
-          padding: 16,
-          borderRadius: 8,
-          maxHeight: 400,
-          overflow: 'auto',
-        }}>
-          {content.split('\n').map((line, i) => (
-            <div key={i} style={{ marginBottom: 8 }}>{line}</div>
-          ))}
-        </div>
-      );
-    }
-
-    if (type === 'codeCase') {
-      return (
-        <pre style={{
-          background: '#1e1e1e',
-          color: '#d4d4d4',
-          padding: 16,
-          borderRadius: 8,
-          overflow: 'auto',
-          maxHeight: 400,
-          fontSize: 12,
-          whiteSpace: 'pre-wrap',
-        }}>
-          {content}
-        </pre>
-      );
-    }
-
-    return (
-      <div style={{
-        background: '#fafafa',
-        padding: 16,
-        borderRadius: 8,
-        maxHeight: 400,
-        overflow: 'auto',
-        whiteSpace: 'pre-wrap',
-      }}>
-        {content}
-      </div>
-    );
   };
 
   return (
@@ -195,7 +179,6 @@ const Resources: React.FC = () => {
       <Title level={2}>多智能体资源生成</Title>
       <Text type="secondary">通过不同角色的智能体协作，基于大模型生成个性化多模态学习资源</Text>
 
-      {/* 错误提示 */}
       {error && (
         <Alert
           message="生成出错"
@@ -257,6 +240,7 @@ const Resources: React.FC = () => {
           <Space>
             <RobotOutlined />
             <span>资源生成控制台</span>
+            {generating && <Tag color="processing" icon={<LoadingOutlined />}>生成中</Tag>}
           </Space>
         }
         extra={
@@ -277,7 +261,18 @@ const Resources: React.FC = () => {
               <Text type="secondary">{currentStep}</Text>
             </div>
 
-            {/* 各类型生成进度 */}
+            {/* 流式内容展示 */}
+            {streamingType && (
+              <div style={{ marginTop: 32, maxWidth: 800, margin: '32px auto 0', textAlign: 'left' }}>
+                <StreamingContentCard
+                  type={streamingType}
+                  content={streamingContent[streamingType] || '正在生成...'}
+                  isStreaming={true}
+                />
+              </div>
+            )}
+
+            {/* 进度条 */}
             <div style={{ marginTop: 32, maxWidth: 600, margin: '32px auto 0' }}>
               {selectedTypes.map(type => (
                 <div key={type} style={{ marginBottom: 16 }}>
@@ -285,8 +280,10 @@ const Resources: React.FC = () => {
                     <Space>
                       {resourceTypeConfig[type].icon}
                       <Text>{resourceTypeConfig[type].label}</Text>
-                      {progress[type] === 100 ? (
+                      {isComplete ? (
                         <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                      ) : streamingType === type ? (
+                        <LoadingOutlined style={{ color: '#1890ff' }} />
                       ) : (
                         <LoadingOutlined />
                       )}
@@ -295,7 +292,7 @@ const Resources: React.FC = () => {
                   </Space>
                   <Progress
                     percent={Math.round(progress[type] || 0)}
-                    status={progress[type] === 100 ? 'success' : 'active'}
+                    status={isComplete ? 'success' : 'active'}
                     size="small"
                     strokeColor={resourceTypeConfig[type].color}
                     style={{ marginTop: 4 }}
@@ -317,25 +314,16 @@ const Resources: React.FC = () => {
       </Card>
 
       {/* 已生成资源展示 */}
-      {displayedResources.length > 0 && (
-        <Card title="已生成资源" style={{ marginTop: 24 }}>
+      {Object.keys(streamingContent).length > 0 && (
+        <Card title={isComplete ? "已生成资源" : "生成中的资源"} style={{ marginTop: 24 }}>
           <Row gutter={[16, 16]}>
-            {displayedResources.map((item) => (
-              <Col span={12} key={item.type}>
-                <Card
-                  size="small"
-                  style={{ borderTop: `3px solid ${resourceTypeConfig[item.type].color}` }}
-                  title={
-                    <Space>
-                      {resourceTypeConfig[item.type].icon}
-                      <span>{resourceTypeConfig[item.type].label}</span>
-                      <Tag color="success">AI生成</Tag>
-                    </Space>
-                  }
-                  extra={<Tag icon={<RobotOutlined />}>资源生成智能体</Tag>}
-                >
-                  {renderResourceContent(item.type, item.content)}
-                </Card>
+            {Object.entries(streamingContent).map(([type, content]) => (
+              <Col span={12} key={type}>
+                <StreamingContentCard
+                  type={type as ResourceType}
+                  content={content}
+                  isStreaming={!isComplete && streamingType === type}
+                />
               </Col>
             ))}
           </Row>
@@ -424,6 +412,14 @@ const Resources: React.FC = () => {
           </div>
         </Form>
       </Modal>
+
+      {/* 添加闪烁动画样式 */}
+      <style>{`
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 };

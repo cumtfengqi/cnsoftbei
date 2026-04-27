@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Card, Typography, Tag, Space, Button, Row, Col, List, Avatar, Input, Badge, Tabs, message } from 'antd';
+import { useState, useRef, useEffect } from 'react';
+import { Card, Typography, Tag, Space, Button, Row, Col, List, Avatar, Input, Badge, Tabs, message, Spin } from 'antd';
 import {
   RobotOutlined,
   FileTextOutlined,
@@ -9,8 +9,11 @@ import {
   SendOutlined,
   LikeOutlined,
   DislikeOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
+import { streamChatCompletion } from '../services/api';
 import type { QAItem } from '../types';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -18,6 +21,8 @@ const { TextArea } = Input;
 const Tutor: React.FC = () => {
   const [question, setQuestion] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [currentAnswer, setCurrentAnswer] = useState('');
+  const [activeMode, setActiveMode] = useState<string>('text');
   const [history, setHistory] = useState<QAItem[]>([
     {
       id: '1',
@@ -37,26 +42,69 @@ const Tutor: React.FC = () => {
     },
   ]);
 
-  const handleAsk = () => {
+  const answerRef = useRef<HTMLPreElement>(null);
+
+  useEffect(() => {
+    if (currentAnswer && answerRef.current) {
+      answerRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [currentAnswer]);
+
+  const handleAsk = async () => {
     if (!question.trim()) return;
+    if (isGenerating) return;
 
-    setIsGenerating(true);
+    const userQuestion = question;
     setQuestion('');
+    setIsGenerating(true);
+    setCurrentAnswer('');
 
-    // 模拟生成答案
-    setTimeout(() => {
+    try {
+      // 根据选择的模式构建系统提示
+      const modePrompts: Record<string, string> = {
+        text: '你是一位专业的AI辅导老师，请详细解答用户的问题。用清晰的结构回答，包含必要的解释和示例。',
+        image: '你是一位专业的AI辅导老师，请解答用户的问题并生成可视化图解说明。尽量用ASCII图或结构化方式来展示概念。',
+        video: '你是一位专业的AI辅导老师，请为用户提供视频讲解脚本。内容包括开场、讲解步骤、总结，每部分时间控制在1分钟内。',
+        code: '你是一位专业的编程老师，请为用户提供完整的代码示例。代码要包含注释和运行说明。',
+      };
+
+      const messages = [
+        { role: 'system' as const, content: modePrompts[activeMode] || modePrompts.text },
+        { role: 'user' as const, content: userQuestion },
+      ];
+
+      let fullAnswer = '';
+
+      await streamChatCompletion(
+        messages,
+        (chunk, isThinking) => {
+          if (!isThinking) {
+            fullAnswer += chunk;
+            setCurrentAnswer(fullAnswer);
+          }
+        },
+        () => {}
+      );
+
+      // 保存到历史
       const newQA: QAItem = {
         id: `qa-${Date.now()}`,
-        question: question,
-        answer: '正在为您分析问题并生成多模态解答，请稍候...',
-        type: 'text',
+        question: userQuestion,
+        answer: fullAnswer,
+        type: activeMode as 'text' | 'image' | 'video' | 'code',
         helpful: false,
         createdAt: new Date().toISOString(),
       };
+
       setHistory(prev => [newQA, ...prev]);
+      message.success('解答完成！');
+
+    } catch (error: any) {
+      console.error('Tutor failed:', error);
+      message.error('解答失败：' + error.message);
+    } finally {
       setIsGenerating(false);
-      message.success('问题已提交，智能辅导智能体正在分析...');
-    }, 500);
+    }
   };
 
   const handleFeedback = (id: string, helpful: boolean) => {
@@ -64,6 +112,10 @@ const Tutor: React.FC = () => {
       item.id === id ? { ...item, helpful } : item
     ));
     message.success(helpful ? '感谢您的肯定！' : '感谢反馈，我们会继续改进');
+  };
+
+  const handleQuickQuestion = (q: string) => {
+    setQuestion(q);
   };
 
   return (
@@ -74,7 +126,8 @@ const Tutor: React.FC = () => {
       {/* 解答模式切换 */}
       <Card style={{ marginTop: 24 }}>
         <Tabs
-          defaultActiveKey="text"
+          activeKey={activeMode}
+          onChange={setActiveMode}
           items={[
             {
               key: 'text',
@@ -124,7 +177,11 @@ const Tutor: React.FC = () => {
               <Space>
                 <Avatar style={{ background: '#722ed1' }} icon={<RobotOutlined />} />
                 <span>智能辅导智能体</span>
-                <Badge status="processing" text="运行中" />
+                {isGenerating ? (
+                  <Tag color="processing" icon={<LoadingOutlined />}>生成中</Tag>
+                ) : (
+                  <Badge status="processing" text="运行中" />
+                )}
               </Space>
             }
           >
@@ -134,23 +191,53 @@ const Tutor: React.FC = () => {
                 placeholder="输入你的问题，例如：什么是卷积神经网络？如何实现快速排序算法？..."
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
+                onPressEnter={(e) => {
+                  if (!e.shiftKey) {
+                    e.preventDefault();
+                    handleAsk();
+                  }
+                }}
+                disabled={isGenerating}
               />
               <Button
                 type="primary"
-                icon={<SendOutlined />}
+                icon={isGenerating ? <LoadingOutlined /> : <SendOutlined />}
                 onClick={handleAsk}
                 loading={isGenerating}
                 block
                 size="large"
               >
-                提交问题
+                {isGenerating ? '正在生成...' : '提交问题'}
               </Button>
             </Space>
 
-            {isGenerating && (
+            {/* 实时显示生成的答案 */}
+            {currentAnswer && (
+              <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
+                <Space style={{ marginBottom: 8 }}>
+                  <Tag color="purple">{activeMode === 'text' ? '文字解答' : activeMode === 'image' ? '图解说明' : activeMode === 'video' ? '视频讲解' : '代码示例'}</Tag>
+                  {isGenerating && <Tag color="processing" icon={<LoadingOutlined />}>生成中</Tag>}
+                </Space>
+                <div
+                  ref={answerRef as any}
+                  style={{
+                    maxHeight: 400,
+                    overflow: 'auto',
+                    padding: 16,
+                    borderRadius: 8,
+                    background: '#fff',
+                  }}
+                >
+                  <MarkdownRenderer content={currentAnswer} />
+                  {isGenerating && <span style={{ animation: 'blink 1s infinite', marginLeft: 4 }}>|</span>}
+                </div>
+              </div>
+            )}
+
+            {isGenerating && !currentAnswer && (
               <div style={{ textAlign: 'center', padding: 40 }}>
-                <Avatar size="large" style={{ background: '#722ed1', marginBottom: 16 }} icon={<RobotOutlined />} />
-                <div>
+                <Spin size="large" />
+                <div style={{ marginTop: 16 }}>
                   <Text>智能辅导智能体正在分析您的问题...</Text>
                   <br />
                   <Text type="secondary">结合知识库和上下文，为您生成多模态解答</Text>
@@ -174,7 +261,12 @@ const Tutor: React.FC = () => {
               ]}
               renderItem={item => (
                 <List.Item>
-                  <Button type="link" size="small" onClick={() => setQuestion(item)}>
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => handleQuickQuestion(item)}
+                    disabled={isGenerating}
+                  >
                     {item}
                   </Button>
                 </List.Item>
@@ -221,6 +313,13 @@ const Tutor: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      <style>{`
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 };

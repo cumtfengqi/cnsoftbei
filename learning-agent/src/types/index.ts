@@ -50,9 +50,10 @@ export interface LearningNode {
   id: string;
   title: string;
   description: string;
-  resources: LearningResource[];
+  resources?: LearningResource[];
   status: 'pending' | 'in-progress' | 'completed';
   progress: number;
+  estimatedHours?: number;
 }
 
 // 学习路径

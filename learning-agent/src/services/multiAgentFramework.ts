@@ -3,7 +3,8 @@
  * 实现不同角色智能体的协作与通信
  */
 
-import { chatCompletion, type ChatMessage } from './api';
+import { streamChatCompletion } from './api';
+import type { ChatMessage } from './api';
 import type { ResourceType, StudentProfile } from '../types';
 
 // 智能体角色定义
@@ -37,6 +38,9 @@ export interface AgentTask {
   result?: any;
   error?: string;
 }
+
+// 流式更新回调
+export type StreamCallback = (delta: string, isThinking: boolean) => void;
 
 // 智能体定义
 export interface Agent {
@@ -217,8 +221,8 @@ class MultiAgentScheduler {
     return task;
   }
 
-  // 执行单智能体任务
-  async executeTask(task: AgentTask): Promise<any> {
+  // 执行单智能体任务（支持流式回调）
+  async executeTask(task: AgentTask, onStream?: StreamCallback): Promise<any> {
     const agentRole = task.assignedAgent || this.inferAgentRole(task.type);
     const agent = this.agents.get(agentRole);
 
@@ -253,12 +257,25 @@ class MultiAgentScheduler {
         messages.push({ role: 'user', content: JSON.stringify(task.input, null, 2) });
       }
 
-      // 调用大模型
-      const response = await chatCompletion(messages);
+      // 调用大模型（使用流式）
+      let fullResponse = '';
+      const response = await streamChatCompletion(
+        messages,
+        (chunk, isThinking) => {
+          if (!isThinking) {
+            fullResponse += chunk;
+            onStream?.(chunk, false);
+          }
+        },
+        (thinking) => {
+          onStream?.(`[思考中: ${thinking.substring(0, 50)}...]`, true);
+        }
+      );
+      fullResponse = response;
 
       // 更新智能体状态
       agent.status = 'speaking';
-      agent.lastMessage = response;
+      agent.lastMessage = fullResponse;
       agent.lastMessageTime = Date.now();
       this.emit('status_changed', { role: agentRole, status: 'speaking' });
 
@@ -267,19 +284,19 @@ class MultiAgentScheduler {
         id: `msg-${Date.now()}`,
         agentId: agent.id,
         agentRole,
-        content: response,
+        content: fullResponse,
         timestamp: Date.now(),
       });
 
       task.status = 'completed';
-      task.result = response;
-      task.output = response;
+      task.result = fullResponse;
+      task.output = fullResponse;
 
       agent.status = 'completed';
       this.emit('status_changed', { role: agentRole, status: 'completed' });
       this.emit('task_completed', task);
 
-      return response;
+      return fullResponse;
     } catch (error: any) {
       task.status = 'failed';
       task.error = error.message;
@@ -347,11 +364,12 @@ export class ResourceGenerator {
     this.scheduler = scheduler;
   }
 
-  // 生成单一资源
+  // 生成单一资源（支持流式输出）
   async generateResource(
     type: ResourceType,
     topic: string,
-    onProgress?: (step: string, progress: number) => void
+    onProgress?: (step: string, progress: number) => void,
+    onStream?: (delta: string) => void
   ): Promise<string> {
     const typeLabels: Record<ResourceType, string> = {
       document: '专业课程讲解文档',
@@ -409,18 +427,26 @@ export class ResourceGenerator {
       'resource'
     );
 
-    const result = await this.scheduler.executeTask(task);
+    // 使用流式执行任务
+    let fullContent = '';
+    const result = await this.scheduler.executeTask(task, (delta, isThinking) => {
+      if (!isThinking && onStream) {
+        onStream(delta);
+      }
+    });
+    fullContent = result;
 
     onProgress?.(`${typeLabels[type]}生成完成`, 100);
 
-    return result;
+    return fullContent;
   }
 
   // 批量生成资源（多智能体协作）
   async generateResources(
     types: ResourceType[],
     topic: string,
-    onProgress?: (type: ResourceType, step: string, progress: number) => void
+    onProgress?: (type: ResourceType, step: string, progress: number) => void,
+    onStream?: (type: ResourceType, delta: string) => void
   ): Promise<Record<ResourceType, string>> {
     const results: Record<ResourceType, string> = {} as Record<ResourceType, string>;
     const total = types.length;
@@ -431,9 +457,21 @@ export class ResourceGenerator {
 
       onProgress?.(type, `开始生成${type}...`, baseProgress);
 
-      results[type] = await this.generateResource(type, topic, (step, p) => {
-        onProgress?.(type, step, baseProgress + (p / 100) * (100 / total));
-      });
+      // 用于累积当前资源的流式内容
+      let currentContent = '';
+      if (onStream) {
+        results[type] = await this.generateResource(type, topic, (step, p) => {
+          onProgress?.(type, step, baseProgress + (p / 100) * (100 / total));
+        }, (delta) => {
+          currentContent += delta;
+          onStream(type, delta);
+        });
+        results[type] = currentContent || results[type];
+      } else {
+        results[type] = await this.generateResource(type, topic, (step, p) => {
+          onProgress?.(type, step, baseProgress + (p / 100) * (100 / total));
+        });
+      }
 
       // 多智能体协作间隔
       if (i < types.length - 1) {
