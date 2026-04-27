@@ -8,6 +8,7 @@ import Resources from './pages/Resources';
 import Path from './pages/Path';
 import Tutor from './pages/Tutor';
 import Assessment from './pages/Assessment';
+import { PageCacheProvider } from './context/PageCacheContext';
 import './App.css';
 
 const { Header, Content } = Layout;
@@ -62,7 +63,9 @@ function App() {
           </div>
         </Header>
         <Content style={{ margin: 0, background: '#f0f2f5' }}>
-          {renderPage()}
+          <PageCacheProvider>
+            {renderPage()}
+          </PageCacheProvider>
         </Content>
       </Layout>
     </Layout>

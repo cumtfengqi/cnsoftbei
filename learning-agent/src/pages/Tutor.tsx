@@ -14,35 +14,47 @@ import {
 import { streamChatCompletion } from '../services/api';
 import type { QAItem } from '../types';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { usePageCache } from '../context/PageCacheContext';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-const Tutor: React.FC = () => {
-  const [question, setQuestion] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [currentAnswer, setCurrentAnswer] = useState('');
-  const [activeMode, setActiveMode] = useState<string>('text');
-  const [history, setHistory] = useState<QAItem[]>([
-    {
-      id: '1',
-      question: '什么是反向传播算法？',
-      answer: '反向传播（Backpropagation）是神经网络中用于训练的核心算法。它通过计算损失函数对每个权重的梯度，从输出层向输入层反向传播误差，从而更新网络参数使损失最小化。简单来说，就是"从错误中学习"的过程。',
-      type: 'text',
-      helpful: true,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      question: 'Python装饰器如何使用？',
-      answer: '装饰器是Python中强大的语法糖，用于修改函数或类的行为。基本用法：在函数上方使用@decorator_name即可。常用场景包括：日志记录、权限验证、缓存等。\n\n```python\ndef my_decorator(func):\n    def wrapper(*args, **kwargs):\n        print("执行前")\n        result = func(*args, **kwargs)\n        print("执行后")\n        return result\n    return wrapper\n\n@my_decorator\ndef say_hello():\n    print("Hello!")\n```',
-      type: 'code',
-      helpful: true,
-      createdAt: new Date().toISOString(),
-    },
-  ]);
+const PAGE_KEY = 'tutor';
 
-  const answerRef = useRef<HTMLPreElement>(null);
+const defaultHistory: QAItem[] = [
+  {
+    id: '1',
+    question: '什么是反向传播算法？',
+    answer: '反向传播（Backpropagation）是神经网络中用于训练的核心算法。它通过计算损失函数对每个权重的梯度，从输出层向输入层反向传播误差，从而更新网络参数使损失最小化。简单来说，就是"从错误中学习"的过程。',
+    type: 'text',
+    helpful: true,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    question: 'Python装饰器如何使用？',
+    answer: '装饰器是Python中强大的语法糖，用于修改函数或类的行为。基本用法：在函数上方使用@decorator_name即可。常用场景包括：日志记录、权限验证、缓存等。\n\n```python\ndef my_decorator(func):\n    def wrapper(*args, **kwargs):\n        print("执行前")\n        result = func(*args, **kwargs)\n        print("执行后")\n        return result\n    return wrapper\n\n@my_decorator\ndef say_hello():\n    print("Hello!")\n```',
+    type: 'code',
+    helpful: true,
+    createdAt: new Date().toISOString(),
+  },
+];
+
+const Tutor: React.FC = () => {
+  const { cachedState, saveState } = usePageCache(PAGE_KEY);
+
+  const [question, setQuestion] = useState(() => cachedState?.question ?? '');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [currentAnswer, setCurrentAnswer] = useState(() => cachedState?.currentAnswer ?? '');
+  const [activeMode, setActiveMode] = useState(() => cachedState?.activeMode ?? 'text');
+  const [history, setHistory] = useState<QAItem[]>(() => cachedState?.history ?? defaultHistory);
+
+  const answerRef = useRef<HTMLDivElement>(null);
+
+  // 缓存状态变化
+  useEffect(() => {
+    saveState({ question, currentAnswer, activeMode, history });
+  }, [question, currentAnswer, activeMode, history, saveState]);
 
   useEffect(() => {
     if (currentAnswer && answerRef.current) {

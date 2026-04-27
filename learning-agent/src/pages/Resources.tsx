@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Typography, Tag, Space, Button, Row, Col, Avatar, Spin, Progress, Modal, Form, Input, Checkbox, message, Alert } from 'antd';
 import {
   FileTextOutlined,
@@ -14,9 +14,12 @@ import {
 import { multiAgentScheduler, resourceGenerator, type AgentRole } from '../services/multiAgentFramework';
 import type { ResourceType } from '../types';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { usePageCache } from '../context/PageCacheContext';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+
+const PAGE_KEY = 'resources';
 
 // 资源类型配置
 const resourceTypeConfig: Record<ResourceType, { icon: React.ReactNode; color: string; label: string; desc: string }> = {
@@ -73,20 +76,27 @@ const StreamingContentCard: React.FC<{
 };
 
 const Resources: React.FC = () => {
+  const { cachedState, saveState } = usePageCache(PAGE_KEY);
+
   const [generating, setGenerating] = useState(false);
-  const [progress, setProgress] = useState<Record<ResourceType, number>>({} as Record<ResourceType, number>);
-  const [currentStep, setCurrentStep] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedTypes, setSelectedTypes] = useState<ResourceType[]>([]);
-  const [learningNeed, setLearningNeed] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<Record<ResourceType, number>>(() => cachedState?.progress ?? {} as Record<ResourceType, number>);
+  const [currentStep, setCurrentStep] = useState(() => cachedState?.currentStep ?? '');
+  const [isModalOpen, setIsModalOpen] = useState(() => cachedState?.isModalOpen ?? false);
+  const [selectedTypes, setSelectedTypes] = useState<ResourceType[]>(() => cachedState?.selectedTypes ?? []);
+  const [learningNeed, setLearningNeed] = useState(() => cachedState?.learningNeed ?? '');
+  const [error, setError] = useState<string | null>(() => cachedState?.error ?? null);
 
   // 流式内容状态
-  const [streamingContent, setStreamingContent] = useState<Record<ResourceType, string>>({} as Record<ResourceType, string>);
-  const [streamingType, setStreamingType] = useState<ResourceType | null>(null);
-  const [isComplete, setIsComplete] = useState(false);
+  const [streamingContent, setStreamingContent] = useState<Record<ResourceType, string>>(() => cachedState?.streamingContent ?? {} as Record<ResourceType, string>);
+  const [streamingType, setStreamingType] = useState<ResourceType | null>(() => cachedState?.streamingType ?? null);
+  const [isComplete, setIsComplete] = useState(() => cachedState?.isComplete ?? false);
 
   const [form] = Form.useForm();
+
+  // 缓存状态变化
+  useEffect(() => {
+    saveState({ generating, progress, currentStep, isModalOpen, selectedTypes, learningNeed, error, streamingContent, streamingType, isComplete });
+  }, [generating, progress, currentStep, isModalOpen, selectedTypes, learningNeed, error, streamingContent, streamingType, isComplete, saveState]);
 
   // 获取智能体状态
   const getAgentStatus = (role: AgentRole) => {

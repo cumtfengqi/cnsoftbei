@@ -4,23 +4,35 @@ import { UserOutlined, EditOutlined, SaveOutlined, ReloadOutlined, SendOutlined,
 import { initialProfile } from '../data/mockData';
 import { streamChatCompletion } from '../services/api';
 import type { StudentProfile, ProfileDimension } from '../types';
+import { usePageCache } from '../context/PageCacheContext';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
+const PAGE_KEY = 'profile';
+
+const defaultChatMessages = [
+  { role: 'assistant', content: '你好！我是画像构建智能体，通过对话我可以了解你的学习特征，帮你构建个性化学习画像。' },
+  { role: 'assistant', content: '请告诉我：你的专业是什么？目前在学习哪些课程？有什么学习目标？' },
+];
+
 const Profile: React.FC = () => {
-  const [profile, setProfile] = useState<StudentProfile>(initialProfile);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<{ role: string; content: string; isStreaming?: boolean }[]>([
-    { role: 'assistant', content: '你好！我是画像构建智能体，通过对话我可以了解你的学习特征，帮你构建个性化学习画像。' },
-    { role: 'assistant', content: '请告诉我：你的专业是什么？目前在学习哪些课程？有什么学习目标？' },
-  ]);
-  const [inputValue, setInputValue] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [currentReply, setCurrentReply] = useState('');
+  const { cachedState, saveState } = usePageCache(PAGE_KEY);
+
+  const [profile, setProfile] = useState<StudentProfile>(() => cachedState?.profile ?? initialProfile);
+  const [isModalOpen, setIsModalOpen] = useState(() => cachedState?.isModalOpen ?? false);
+  const [chatMessages, setChatMessages] = useState<{ role: string; content: string; isStreaming?: boolean }[]>(() => cachedState?.chatMessages ?? defaultChatMessages);
+  const [inputValue, setInputValue] = useState(() => cachedState?.inputValue ?? '');
+  const [isAnalyzing, setIsAnalyzing] = useState(() => cachedState?.isAnalyzing ?? false);
+  const [currentReply, setCurrentReply] = useState(() => cachedState?.currentReply ?? '');
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [form] = Form.useForm();
+
+  // 缓存状态变化
+  useEffect(() => {
+    saveState({ profile, isModalOpen, chatMessages, inputValue, isAnalyzing, currentReply });
+  }, [profile, isModalOpen, chatMessages, inputValue, isAnalyzing, currentReply, saveState]);
 
   // 自动滚动到底部
   useEffect(() => {
@@ -75,7 +87,7 @@ ${profile.dimensions.map(d => `- ${d.label}: ${d.value} (${d.level})`).join('\n'
             fullResponse += chunk;
             // 实时更新回复（用于分析JSON输出后的部分）
             if (hasAnalysis && chunk.length > 0) {
-              setCurrentReply(prev => prev + chunk);
+              setCurrentReply((prev: string) => prev + chunk);
             }
           }
         },

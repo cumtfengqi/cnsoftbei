@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card, Typography, Tag, Space, Button, Row, Col, Steps, Progress, List, Avatar, Collapse, message } from 'antd';
 import {
   ClockCircleOutlined,
@@ -12,9 +12,13 @@ import {
 import { mockLearningPath, mockResources } from '../data/mockData';
 import { streamChatCompletion } from '../services/api';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { usePageCache } from '../context/PageCacheContext';
+import type { LearningPath } from '../types';
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
+
+const PAGE_KEY = 'path';
 
 interface LearningNode {
   id: string;
@@ -26,13 +30,20 @@ interface LearningNode {
 }
 
 const Path: React.FC = () => {
-  const [pathData, setPathData] = useState(mockLearningPath);
-  const [activeNode, setActiveNode] = useState(pathData.currentNodeId);
-  const [isPlanning, setIsPlanning] = useState(false);
-  const [planningResult, setPlanningResult] = useState<string | null>(null);
-  const [currentPlanText, setCurrentPlanText] = useState('');
+  const { cachedState, saveState } = usePageCache(PAGE_KEY);
+
+  const [pathData, setPathData] = useState<LearningPath>(() => cachedState?.pathData ?? mockLearningPath);
+  const [activeNode, setActiveNode] = useState<string>(() => cachedState?.activeNode ?? mockLearningPath.currentNodeId);
+  const [isPlanning, setIsPlanning] = useState<boolean>(() => cachedState?.isPlanning ?? false);
+  const [planningResult, setPlanningResult] = useState<string | null>(() => cachedState?.planningResult ?? null);
+  const [currentPlanText, setCurrentPlanText] = useState<string>(() => cachedState?.currentPlanText ?? '');
 
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // 缓存状态变化
+  useEffect(() => {
+    saveState({ pathData, activeNode, isPlanning, planningResult, currentPlanText });
+  }, [pathData, activeNode, isPlanning, planningResult, currentPlanText, saveState]);
 
   // 调用AI生成个性化学习路径（流式）
   const generateLearningPath = async (topic: string) => {
