@@ -212,6 +212,7 @@
     { "key": "profile", "iconName": "UserOutlined", "label": "学习画像" },
     { "key": "resources", "iconName": "FileTextOutlined", "label": "资源生成" },
     { "key": "path", "iconName": "AimOutlined", "label": "学习路径" },
+    { "key": "practice", "iconName": "RocketOutlined", "label": "练习中心" },
     { "key": "tutor", "iconName": "QuestionCircleOutlined", "label": "智能辅导" },
     { "key": "assessment", "iconName": "DashboardOutlined", "label": "效果评估" }
   ]

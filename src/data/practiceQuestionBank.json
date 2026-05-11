@@ -1,0 +1,379 @@
+{
+  "learningPlan": {
+    "id": "python-basics",
+    "name": "Python 编程基础",
+    "description": "系统学习 Python 编程，从语法基础到面向对象编程",
+    "modules": [
+      { "id": "module-1", "name": "Python 基础语法", "description": "变量、数据类型、运算符、流程控制", "questionCount": 12, "tags": ["syntax", "data-types", "operators", "control-flow"] },
+      { "id": "module-2", "name": "函数与模块", "description": "函数定义、参数传递、模块导入与使用", "questionCount": 12, "tags": ["functions", "modules", "scope", "errorProne"] },
+      { "id": "module-3", "name": "面向对象编程", "description": "类与对象、继承与多态、魔术方法", "questionCount": 12, "tags": ["OOP", "classes", "inheritance", "polymorphism", "errorProne"] },
+      { "id": "module-4", "name": "进阶与实战", "description": "异常处理、文件操作、装饰器、推导式", "questionCount": 12, "tags": ["exceptions", "files", "decorators", "comprehensions", "errorProne", "studyHabit"] }
+    ]
+  },
+
+  "questions": [
+    {
+      "id": "q101", "moduleId": "module-1", "type": "truefalse", "difficulty": "easy",
+      "tags": ["syntax", "knowledgeBase"],
+      "question": "Python 中变量在使用前必须先声明类型。",
+      "trueFalseAnswer": false,
+      "explanation": "Python 是动态类型语言，变量无需声明类型，类型由赋值的对象决定。"
+    },
+    {
+      "id": "q102", "moduleId": "module-1", "type": "truefalse", "difficulty": "easy",
+      "tags": ["data-types", "knowledgeBase"],
+      "question": "在 Python 中，list 是可变类型，tuple 是不可变类型。",
+      "trueFalseAnswer": true,
+      "explanation": "list 支持 append、remove 等修改操作；tuple 创建后不能修改元素。"
+    },
+    {
+      "id": "q103", "moduleId": "module-1", "type": "choice", "difficulty": "easy",
+      "tags": ["data-types", "knowledgeBase"],
+      "question": "以下哪个不是 Python 的基本数据类型？",
+      "options": ["int", "float", "array", "str"],
+      "correctAnswer": "array",
+      "explanation": "int、float、str 都是 Python 基本数据类型。array 不是 Python 的内置基本类型，若需数组可用 list 或 numpy。"
+    },
+    {
+      "id": "q104", "moduleId": "module-1", "type": "choice", "difficulty": "medium",
+      "tags": ["operators", "knowledgeBase"],
+      "question": "表达式 `3 ** 2 ** 2` 的结果是？",
+      "options": ["81", "64", "729", "18"],
+      "correctAnswer": "81",
+      "explanation": "** 运算符是右结合的，等价于 3 ** (2 ** 2) = 3 ** 4 = 81。"
+    },
+    {
+      "id": "q105", "moduleId": "module-1", "type": "truefalse", "difficulty": "medium",
+      "tags": ["syntax", "knowledgeBase"],
+      "question": "Python 中的 `elif` 可以替代 `else if` 使用，效果完全相同。",
+      "trueFalseAnswer": false,
+      "explanation": "Python 使用 `elif` 关键字，而不是 `else if`（那是其他语言如 C/Java 的写法）。"
+    },
+    {
+      "id": "q106", "moduleId": "module-1", "type": "choice", "difficulty": "medium",
+      "tags": ["data-types", "knowledgeBase"],
+      "question": "以下哪个表达式的结果为 True？",
+      "options": ["'hello' == 'hello'", "\"hello\" == 'hello'", "3 > 2 > 1", "以上全部"],
+      "correctAnswer": "以上全部",
+      "explanation": "Python 中单引号和双引号等价；3 > 2 > 1 是链式比较，等价于 (3 > 2) and (2 > 1)。"
+    },
+    {
+      "id": "q107", "moduleId": "module-1", "type": "truefalse", "difficulty": "easy",
+      "tags": ["syntax", "knowledgeBase"],
+      "question": "Python 使用缩进（indentation）来标识代码块。",
+      "trueFalseAnswer": true,
+      "explanation": "Python 的代码块由缩进层级决定，这是 Python 与多数语言的重要区别。"
+    },
+    {
+      "id": "q108", "moduleId": "module-1", "type": "choice", "difficulty": "easy",
+      "tags": ["data-types", "knowledgeBase"],
+      "question": "`type({})` 的返回值是？",
+      "options": ["<class 'set'>", "<class 'dict'>", "<class 'list'>", "<class 'tuple'>"],
+      "correctAnswer": "<class 'dict'>",
+      "explanation": "{} 在 Python 中创建的是空字典（dict），而非空集合（空集合要用 set()）。"
+    },
+    {
+      "id": "q109", "moduleId": "module-1", "type": "short", "difficulty": "medium",
+      "tags": ["syntax", "data-types", "knowledgeBase"],
+      "question": "请说明 Python 中 `==` 和 `is` 的区别，并举例说明何时应该使用哪个。",
+      "sampleAnswer": "`==` 比较两个对象的值是否相等，`is` 比较两个对象是否是同一个引用（内存地址）。`==` 调用对象的 `__eq__` 方法，`is` 直接比较身份。示例：a = [1,2]; b = [1,2]; a == b 为 True（值相等），a is b 为 False（不同对象）。通常使用 `==` 比较值，使用 `is` 与 None 比较（如 `x is None`）。",
+      "explanation": "要点：1. `==` 比较值相等，`is` 比较身份/引用相等；2. `is` 比 `==` 更快因为直接比较指针；3. `is None` 是判断 None 的推荐方式。"
+    },
+    {
+      "id": "q110", "moduleId": "module-1", "type": "choice", "difficulty": "medium",
+      "tags": ["operators", "knowledgeBase"],
+      "question": "`print(1 or 2)` 的输出是？",
+      "options": ["1", "2", "True", "False"],
+      "correctAnswer": "1",
+      "explanation": "or 运算符返回第一个真值（short-circuit evaluation）。1 是真值，直接返回 1，不再计算 2。"
+    },
+    {
+      "id": "q111", "moduleId": "module-1", "type": "choice", "difficulty": "hard",
+      "tags": ["data-types", "knowledgeBase"],
+      "question": "执行 `a = [1, 2, 3]; b = a; b.append(4)` 后，a 的值是？",
+      "options": ["[1, 2, 3]", "[1, 2, 3, 4]", "报错", "[1, 2, 3][4]"],
+      "correctAnswer": "[1, 2, 3, 4]",
+      "explanation": "b = a 是引用赋值，a 和 b 指向同一个列表对象。修改 b 也就是修改 a。"
+    },
+    {
+      "id": "q112", "moduleId": "module-1", "type": "short", "difficulty": "medium",
+      "tags": ["syntax", "control-flow", "knowledgeBase"],
+      "question": "Python 的 for 循环和 while 循环有什么区别？各适合什么场景？",
+      "sampleAnswer": "for 循环用于遍历可迭代对象（列表、元组、字典、字符串等），适合已知循环次数或需要遍历集合的场景。while 循环在条件为真时持续执行，适合循环次数不确定的场景。示例：for i in range(5) 适合固定次数循环；while not done 适合等待某个条件改变。",
+      "explanation": "要点：1. for 是确定循环，while 是不确定循环；2. for 自动处理迭代器，while 需要手动更新条件避免死循环；3. 遍历集合用 for，等待事件用 while。"
+    },
+
+    {
+      "id": "q201", "moduleId": "module-2", "type": "truefalse", "difficulty": "easy",
+      "tags": ["functions", "knowledgeBase"],
+      "question": "Python 函数可以返回多个值。",
+      "trueFalseAnswer": true,
+      "explanation": "Python 函数可以用 return a, b, c 形式返回多个值，实际返回一个 tuple。"
+    },
+    {
+      "id": "q202", "moduleId": "module-2", "type": "truefalse", "difficulty": "medium",
+      "tags": ["functions", "errorProne", "knowledgeBase"],
+      "question": "函数的默认参数值可以是可变对象（如 list），且行为总是安全的。",
+      "trueFalseAnswer": false,
+      "explanation": "默认参数在函数定义时求值一次，可变默认参数会在多次调用间共享，造成副作用。使用 None 作为默认值是常见最佳实践。"
+    },
+    {
+      "id": "q203", "moduleId": "module-2", "type": "choice", "difficulty": "medium",
+      "tags": ["functions", "errorProne", "knowledgeBase"],
+      "question": "以下哪个是正确的装饰器语法？",
+      "options": ["@decorator", "@decorator()", "@decorator func", "@ decorator"],
+      "correctAnswer": "@decorator",
+      "explanation": "@decorator 用于装饰无参装饰器；@decorator() 用于装饰有参装饰器（即使无参也需括号）。"
+    },
+    {
+      "id": "q204", "moduleId": "module-2", "type": "choice", "difficulty": "easy",
+      "tags": ["modules", "knowledgeBase"],
+      "question": "以下哪个命令可以将模块 my_module 中的 func 函数导入到当前命名空间？",
+      "options": ["import my_module.func", "from my_module import func", "using my_module.func", "include my_module.func"],
+      "correctAnswer": "from my_module import func",
+      "explanation": "from ... import ... 是导入模块或模块成员的标准语法。"
+    },
+    {
+      "id": "q205", "moduleId": "module-2", "type": "truefalse", "difficulty": "medium",
+      "tags": ["scope", "errorProne", "knowledgeBase"],
+      "question": "在 Python 中，可以在函数内部修改全局变量的值而不使用 global 关键字。",
+      "trueFalseAnswer": false,
+      "explanation": "Python 中在函数内赋值会创建局部变量，不会修改全局变量。必须使用 global 关键字声明才能修改全局变量。"
+    },
+    {
+      "id": "q206", "moduleId": "module-2", "type": "choice", "difficulty": "hard",
+      "tags": ["functions", "errorProne", "knowledgeBase"],
+      "question": "执行以下代码，`y` 的值是？\n\n```python\ndef foo(x, lst=[]):\n    lst.append(x)\n    return lst\n\ny = foo(1)\ny = foo(2)\n```",
+      "options": ["[1]", "[2]", "[1, 2]", "报错"],
+      "correctAnswer": "[1, 2]",
+      "explanation": "默认参数 lst 在函数定义时创建一次，后续调用共享同一个列表对象。foo(1) 后 lst=[1]，foo(2) 后 lst=[1,2]。"
+    },
+    {
+      "id": "q207", "moduleId": "module-2", "type": "choice", "difficulty": "medium",
+      "tags": ["modules", "knowledgeBase"],
+      "question": "`__all__` 变量在 Python 模块中的作用是？",
+      "options": ["定义模块版本", "控制 from module import * 时导入的内容", "定义模块的公共 API", "阻止模块被导入"],
+      "correctAnswer": "控制 from module import * 时导入的内容",
+      "explanation": "__all__ 列表定义了使用 from module import * 语法时哪些名称会被导入。未列入的名称不会被导入。"
+    },
+    {
+      "id": "q208", "moduleId": "module-2", "type": "choice", "difficulty": "medium",
+      "tags": ["functions", "knowledgeBase"],
+      "question": "函数参数中 `*args` 和 `**kwargs` 的作用是？",
+      "options": ["`*args` 接收关键字参数，`**kwargs` 接收位置参数", "`*args` 接收位置参数元组，`**kwargs` 接收关键字参数字典", "两者功能完全相同，只是写法不同", "两者都用于类型注解"],
+      "correctAnswer": "`*args` 接收位置参数元组，`**kwargs` 接收关键字参数字典",
+      "explanation": "*args 将多余位置参数收集为元组，**kwargs 将多余关键字参数收集为字典。"
+    },
+    {
+      "id": "q209", "moduleId": "module-2", "type": "short", "difficulty": "hard",
+      "tags": ["functions", "errorProne", "knowledgeBase"],
+      "question": "请解释 Python 中函数调用时的参数传递机制。它是按值传递还是按引用传递？请结合示例说明。",
+      "sampleAnswer": "Python 采用『按对象引用传递』（Pass by Object Reference）。对于不可变对象（int, str, tuple），即使在函数内修改也无法影响外部；对于可变对象（list, dict），在函数内修改会影响外部。示例：def func(lst): lst.append(1) → 调用 func(a) 会修改 a；def func(x): x = 5 → 调用 func(a)（a=10）不会修改 a，因为 x 被重新赋值为 5，指向了新对象。",
+      "explanation": "要点：1. Python 既非按值也非按引用，而是按『对象引用传递』；2. 不可变对象表现得像按值传递；3. 可变对象表现得像按引用传递；4. 重新赋值只影响局部变量，不影响外部。"
+    },
+    {
+      "id": "q210", "moduleId": "module-2", "type": "truefalse", "difficulty": "easy",
+      "tags": ["modules", "knowledgeBase"],
+      "question": "使用 `from math import *` 会导入 math 模块中的所有公开属性。",
+      "trueFalseAnswer": true,
+      "explanation": "from module import * 会导入模块中所有未以下划线开头的名称，除非模块定义了 __all__。"
+    },
+    {
+      "id": "q211", "moduleId": "module-2", "type": "choice", "difficulty": "medium",
+      "tags": ["functions", "knowledgeBase"],
+      "question": "以下哪个是 Python 中合法的 lambda 函数？",
+      "options": ["lambda x, y: x + y", "lambda (x, y): x + y", "def lambda(x, y): return x + y", "lambda x: return x + 1"],
+      "correctAnswer": "lambda x, y: x + y",
+      "explanation": "lambda 是单行匿名函数，语法为 lambda 参数: 表达式。不能包含 return 语句（因为 lambda 体本身就是返回值），也不能用括号包裹参数。"
+    },
+    {
+      "id": "q212", "moduleId": "module-2", "type": "short", "difficulty": "medium",
+      "tags": ["modules", "functions", "knowledgeBase"],
+      "question": "请说明 Python 模块的搜索路径顺序，以及如何修改模块搜索路径。",
+      "sampleAnswer": "Python 模块搜索顺序：1. 程序当前目录；2. PYTHONPATH 环境变量中的目录；3. Python 安装目录（site-packages 等）；4. 标准库目录。可以通过 sys.path.append() 动态添加路径，或修改 PYTHONPATH 环境变量。",
+      "explanation": "要点：1. sys.path[0] 是脚本所在目录；2. sys.path 是一个列表，可直接 append 自定义路径；3. 环境变量 PYTHONPATH 可永久添加搜索路径。"
+    },
+
+    {
+      "id": "q301", "moduleId": "module-3", "type": "truefalse", "difficulty": "easy",
+      "tags": ["OOP", "knowledgeBase"],
+      "question": "Python 中所有类的方法的第一个参数都代表当前实例，通常命名为 self。",
+      "trueFalseAnswer": true,
+      "explanation": "self 是类方法中指向实例本身的引用，虽然可以使用任意名称，但按照惯例使用 self。"
+    },
+    {
+      "id": "q302", "moduleId": "module-3", "type": "truefalse", "difficulty": "medium",
+      "tags": ["inheritance", "errorProne", "knowledgeBase"],
+      "question": "Python 支持多继承，一个子类可以有多个父类。",
+      "trueFalseAnswer": true,
+      "explanation": "Python 支持多继承，但需要注意菱形继承问题和方法解析顺序（MRO）。"
+    },
+    {
+      "id": "q303", "moduleId": "module-3", "type": "choice", "difficulty": "medium",
+      "tags": ["classes", "errorProne", "knowledgeBase"],
+      "question": "以下哪个不是 Python 的魔术方法（dunder method）？",
+      "options": ["__init__", "__len__", "__main__", "__str__"],
+      "correctAnswer": "__main__",
+      "explanation": "__init__、__len__、__str__ 都是魔术方法。__main__ 不是类的方法，它是表示模块作为主程序运行的标识。"
+    },
+    {
+      "id": "q304", "moduleId": "module-3", "type": "choice", "difficulty": "medium",
+      "tags": ["inheritance", "polymorphism", "knowledgeBase"],
+      "question": "在 Python 中，以下哪种方式最符合『面向对象设计原则』中的『里氏替换原则』？",
+      "options": ["子类可以扩展父类，但不能改变父类的行为", "子类必须完全复制父类的所有方法", "子类可以重写父类的所有方法", "子类禁止调用父类的方法"],
+      "correctAnswer": "子类可以扩展父类，但不能改变父类的行为",
+      "explanation": "里氏替换原则要求子类可以在任何地方替代父类，而不改变程序的正确性。即子类可以扩展功能，但不应改变父类原有的行为契约。"
+    },
+    {
+      "id": "q305", "moduleId": "module-3", "type": "truefalse", "difficulty": "medium",
+      "tags": ["classes", "errorProne", "knowledgeBase"],
+      "question": "Python 中使用 `@property` 装饰器可以让一个方法像属性一样被访问。",
+      "trueFalseAnswer": true,
+      "explanation": "@property 将方法转换为『Getter』属性访问，提供了比直接暴露属性更多的控制能力。"
+    },
+    {
+      "id": "q306", "moduleId": "module-3", "type": "choice", "difficulty": "hard",
+      "tags": ["OOP", "polymorphism", "knowledgeBase"],
+      "question": "执行以下代码，输出是？\n\n```python\nclass A:\n    def __init__(self, v): self.v = v\n    def __eq__(self, other): return self.v == other.v\n\nclass B(A):\n    def __init__(self, v): self.v = v\n\na = A(1); b = B(1)\nprint(a == b)\n```",
+      "options": ["True", "False", "抛出 TypeError", "None"],
+      "correctAnswer": "True",
+      "explanation": "a.__eq__(b) 调用 A 的 __eq__，self.v=1, other.v=1，返回 True。虽然 B 没有定义 __eq__，但比较时 Python 会调用父类 A 的方法。"
+    },
+    {
+      "id": "q307", "moduleId": "module-3", "type": "choice", "difficulty": "medium",
+      "tags": ["classes", "knowledgeBase"],
+      "question": "以下哪种方法最适合实现类的『单例模式』？",
+      "options": ["在 __new__ 中返回同一个实例", "使用类变量存储唯一实例", "使用装饰器包装类", "以上方法都可以"],
+      "correctAnswer": "以上方法都可以",
+      "explanation": "三种方式都可以实现单例模式：1. 重写 __new__ 返回同一实例；2. 用类变量缓存实例；3. 用装饰器包装。最常用的是重写 __new__。"
+    },
+    {
+      "id": "q308", "moduleId": "module-3", "type": "choice", "difficulty": "medium",
+      "tags": ["inheritance", "knowledgeBase"],
+      "question": "使用 `class Child(Parent1, Parent2)` 定义类时，Child 类的方法解析顺序（MRO）是？",
+      "options": ["Child -> Parent1 -> Parent2 -> object", "Child -> Parent2 -> Parent1 -> object", "由类的 C3 线性化算法决定", "总是先搜索 Parent1"],
+      "correctAnswer": "由类的 C3 线性化算法决定",
+      "explanation": "Python 使用 C3 线性化算法计算 MRO，保证每个类在其父类之前，且继承顺序保持一致。可以用 ClassName.__mro__ 查看。"
+    },
+    {
+      "id": "q309", "moduleId": "module-3", "type": "short", "difficulty": "hard",
+      "tags": ["OOP", "classes", "errorProne", "knowledgeBase"],
+      "question": "请说明 Python 中 `__slots__` 的作用和使用场景，以及它与默认的 `__dict__` 相比有什么优势和限制。",
+      "sampleAnswer": "__slots__ 是类变量，用于声明实例允许的属性名称。优势：1. 减少内存消耗（不使用 __dict__）；2. 防止动态添加属性（更安全）；3. 加快属性访问速度。限制：1. 子类也需要定义 __slots__ 才能使用 __dict__；2. 不能动态添加未声明的属性；3. 多继承时只有一个类可以定义 __slots__ 包含非空值。",
+      "explanation": "要点：1. __slots__ 通过固定实例属性名来节省内存；2. 适合需要创建大量实例的场景（如数据类、游戏对象）；3. 限制动态添加属性，有时反而是优点。"
+    },
+    {
+      "id": "q310", "moduleId": "module-3", "type": "truefalse", "difficulty": "easy",
+      "tags": ["classes", "knowledgeBase"],
+      "question": "私有属性（如 `self.__x`）在 Python 中是完全无法从类外部访问的。",
+      "trueFalseAnswer": false,
+      "explanation": "Python 的私有属性只是名字改写（name mangling），实际为 _ClassName__x，仍可通过改名访问。Python 依赖开发者遵守约定，不做强制访问限制。"
+    },
+    {
+      "id": "q311", "moduleId": "module-3", "type": "choice", "difficulty": "medium",
+      "tags": ["classes", "knowledgeBase"],
+      "question": "下面代码的输出是？\n\n```python\nclass A:\n    x = 1\nclass B(A): pass\nclass C(A): pass\nA.x = 2\nprint(B.x, C.x)\n```",
+      "options": ["1 1", "2 2", "1 2", "2 1"],
+      "correctAnswer": "2 2",
+      "explanation": "类属性在实例和类中共享。修改 A.x 后，B 和 C 没有自己的 x，会向上查找找到 A.x=2。"
+    },
+    {
+      "id": "q312", "moduleId": "module-3", "type": "short", "difficulty": "medium",
+      "tags": ["polymorphism", "OOP", "knowledgeBase"],
+      "question": "Python 的 duck typing（鸭子类型）和传统的静态类型语言的多态有什么本质区别？请举例说明。",
+      "sampleAnswer": "静态类型语言的多态基于继承层次结构和接口约束，需要显式声明类型；Python 的 duck typing 只关注对象『能做什么』而不关注『是什么』。示例：只要对象有 len() 方法，就可以用 len() 函数，无需继承任何接口。而 Java 的 List 必须实现 List 接口才能用于期望 List 的方法。",
+      "explanation": "要点：1. Duck typing 不依赖类型声明，只依赖对象的行为（方法/属性）；2. 更灵活但缺乏编译时检查；3. Python 的可迭代协议、上下文管理器协议都是 duck typing 的应用。"
+    },
+
+    {
+      "id": "q401", "moduleId": "module-4", "type": "truefalse", "difficulty": "easy",
+      "tags": ["exceptions", "knowledgeBase"],
+      "question": "在 Python 中，`try...except...finally` 语句中，`finally` 块无论是否发生异常都会执行。",
+      "trueFalseAnswer": true,
+      "explanation": "finally 块用于清理资源，无论 try 中是否有异常、是否被 except 捕获，finally 都会执行。"
+    },
+    {
+      "id": "q402", "moduleId": "module-4", "type": "truefalse", "difficulty": "medium",
+      "tags": ["files", "errorProne", "knowledgeBase"],
+      "question": "使用 `with open('file.txt') as f:` 打开文件时，文件会在 with 块结束时自动关闭，无需手动调用 f.close()。",
+      "trueFalseAnswer": true,
+      "explanation": "with 语句利用上下文管理器协议，在退出 with 块时自动调用 f.__exit__() 关闭文件，推荐的文件操作方式。"
+    },
+    {
+      "id": "q403", "moduleId": "module-4", "type": "choice", "difficulty": "medium",
+      "tags": ["exceptions", "errorProne", "knowledgeBase"],
+      "question": "以下哪个语法可以正确捕获所有类型的异常？",
+      "options": ["except Exception:", "except:", "except BaseException:", "以上都可以"],
+      "correctAnswer": "以上都可以",
+      "explanation": "except: 和 except Exception: 都能捕获所有异常（但不包括 SystemExit 等系统异常）。except BaseException: 捕获包括 SystemExit 在内的所有异常。最安全的做法是 except Exception:。"
+    },
+    {
+      "id": "q404", "moduleId": "module-4", "type": "choice", "difficulty": "medium",
+      "tags": ["decorators", "knowledgeBase"],
+      "question": "执行以下代码，输出是？\n\n```python\ndef decorator(func):\n    return func\n\n@decorator\ndef foo():\n    return 'hello'\n\nprint(foo())\n```",
+      "options": ["<function func>", "'hello'", "报错", "None"],
+      "correctAnswer": "'hello'",
+      "explanation": "decorator 直接返回原始函数 func，foo 被替换为 func，所以 foo() 调用的是原始的 foo 函数，返回 'hello'。"
+    },
+    {
+      "id": "q405", "moduleId": "module-4", "type": "truefalse", "difficulty": "medium",
+      "tags": ["comprehensions", "errorProne", "knowledgeBase"],
+      "question": "列表推导式 `[x for x in range(5)]` 与生成器表达式 `(x for x in range(5))` 完全等效。",
+      "trueFalseAnswer": false,
+      "explanation": "列表推导式返回列表，可迭代多次；生成器表达式返回生成器对象，只能迭代一次。这是内存和惰性求值的关键区别。"
+    },
+    {
+      "id": "q406", "moduleId": "module-4", "type": "choice", "difficulty": "hard",
+      "tags": ["exceptions", "errorProne", "knowledgeBase"],
+      "question": "执行以下代码，会输出什么？\n\n```python\ntry:\n    raise ValueError('error1')\nexcept ValueError as e:\n    print('caught')\n    raise TypeError('error2')\nfinally:\n    print('finally')\n```",
+      "options": ["caught / finally（各一次）", "caught / finally / finally", "caught / finally 并抛出 TypeError", "仅输出 caught"],
+      "correctAnswer": "caught / finally 并抛出 TypeError",
+      "explanation": "except 捕获 ValueError 后打印 caught，然后 raise TypeError。finally 总是执行，最后 TypeError 向上传播未被捕获。"
+    },
+    {
+      "id": "q407", "moduleId": "module-4", "type": "choice", "difficulty": "medium",
+      "tags": ["comprehensions", "knowledgeBase"],
+      "question": "`{x: x**2 for x in range(5)}` 创建的对象类型是？",
+      "options": ["dict", "set", "list", "tuple"],
+      "correctAnswer": "dict",
+      "explanation": "字典推导式使用 {key: value for ...} 语法，创建字典。集合推导式使用 {x for x in ...}，创建集合。"
+    },
+    {
+      "id": "q408", "moduleId": "module-4", "type": "choice", "difficulty": "medium",
+      "tags": ["decorators", "errorProne", "knowledgeBase"],
+      "question": "装饰器 `@functools.wraps(func)` 的主要作用是？",
+      "options": ["加速函数执行", "保留原函数的元信息（名称、文档字符串等）", "将函数转换为协程", "自动处理异常"],
+      "correctAnswer": "保留原函数的元信息（名称、文档字符串等）",
+      "explanation": "@wraps(func) 复制被装饰函数的 __name__、__doc__、__module__ 等属性到包装函数，使装饰后的函数保持原有元信息。"
+    },
+    {
+      "id": "q409", "moduleId": "module-4", "type": "short", "difficulty": "hard",
+      "tags": ["exceptions", "errorProne", "studyHabit", "knowledgeBase"],
+      "question": "请说明 Python 中自定义异常类的最佳实践，包括如何命名、是否需要定义额外属性，以及在什么场景下应该创建自定义异常。",
+      "sampleAnswer": "最佳实践：1. 命名：自定义异常类应以 Error 结尾（如 ValidationError），继承自内建异常类如 Exception 或更具体的如 ValueError；2. 额外属性：在 __init__ 中添加额外的上下文信息（如错误码、字段名）；3. 使用场景：当需要表示特定业务逻辑错误、需要在代码中精确捕获和处理特定错误时。示例：class PasswordTooShortError(Exception): def __init__(self, length, min_length): self.length = length; self.min_length = min_length; super().__init__(f'密码长度{length}不足，最小{min_length}')。",
+      "explanation": "要点：1. 命名以 Error 结尾；2. 继承适当的基础异常；3. 提供有意义的错误消息；4. 当标准异常不够精确表达业务语义时使用自定义异常；5. 避免过度自定义异常。"
+    },
+    {
+      "id": "q410", "moduleId": "module-4", "type": "choice", "difficulty": "medium",
+      "tags": ["files", "knowledgeBase"],
+      "question": "以二进制模式写入二进制数据，正确的打开方式是？",
+      "options": ["open('file', 'w')", "open('file', 'wb')", "open('file', 'bw')", "open('file', 'wb+')"],
+      "correctAnswer": "open('file', 'wb')",
+      "explanation": "'wb' 表示以二进制写入模式打开文件。'w' 是文本写入，'bw' 不是有效的模式。"
+    },
+    {
+      "id": "q411", "moduleId": "module-4", "type": "truefalse", "difficulty": "medium",
+      "tags": ["decorators", "errorProne", "knowledgeBase"],
+      "question": "带参数的装饰器 `@decorator(arg)` 本质上是一个返回装饰器的函数。",
+      "trueFalseAnswer": true,
+      "explanation": "@decorator(arg) 等价于 decorator(arg)，如果 decorator 返回一个函数（装饰器），该函数再作用于被装饰的函数。这是装饰器的标准两层结构。"
+    },
+    {
+      "id": "q412", "moduleId": "module-4", "type": "short", "difficulty": "medium",
+      "tags": ["files", "comprehensions", "errorProne", "studyHabit", "knowledgeBase"],
+      "question": "请说明 Python 文件操作中『打开模式』的区别（r/w/a/r+/w+/a+/b/t），以及如何安全地处理文件操作中的异常。",
+      "sampleAnswer": "主要模式：r（读）、w（写/覆盖）、a（追加）、r+（读写，不创建）、w+（读写，覆盖）、a+（读写，追加）、b（二进制）、t（文本，默认）。安全处理：使用 with open() 自动关闭文件；使用 try...except 捕获 FileNotFoundError、PermissionError 等；分别处理不同类型的异常。示例：try:\n    with open('data.txt', 'r') as f:\n        content = f.read()\nexcept FileNotFoundError:\n    print('文件不存在')\nexcept PermissionError:\n    print('无权限')。",
+      "explanation": "要点：1. r/w/a 是最基本的三种模式；2. + 表示读写混合；3. b 表示二进制；4. with 语句确保文件正确关闭；5. 针对性捕获异常比 bare except 更安全。"
+    }
+  ]
+}

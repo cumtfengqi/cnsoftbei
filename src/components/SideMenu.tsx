@@ -7,6 +7,7 @@ import {
   QuestionCircleOutlined,
   DashboardOutlined,
   HomeOutlined,
+  RocketOutlined,
 } from '@ant-design/icons';
 import { menuItems as menuData } from '../data/mockData';
 
@@ -20,6 +21,7 @@ const iconComponentMap: Record<string, React.ReactNode> = {
   AimOutlined: <AimOutlined />,
   QuestionCircleOutlined: <QuestionCircleOutlined />,
   DashboardOutlined: <DashboardOutlined />,
+  RocketOutlined: <RocketOutlined />,
 };
 
 interface SideMenuProps {

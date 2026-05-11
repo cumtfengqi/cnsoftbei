@@ -8,6 +8,7 @@ import Resources from './pages/Resources';
 import Path from './pages/Path';
 import Tutor from './pages/Tutor';
 import Assessment from './pages/Assessment';
+import Practice from './pages/Practice';
 import { PageCacheProvider } from './context/PageCacheContext';
 import './App.css';
 
@@ -31,6 +32,8 @@ function App() {
         return <Tutor />;
       case 'assessment':
         return <Assessment />;
+      case 'practice':
+        return <Practice />;
       default:
         return <Home />;
     }
