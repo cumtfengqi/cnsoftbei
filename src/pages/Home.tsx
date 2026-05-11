@@ -5,7 +5,7 @@ import {
   ClockCircleOutlined,
   RiseOutlined,
 } from '@ant-design/icons';
-import { initialProfile, mockLearningPath, mockAssessments } from '../data/mockData';
+import { initialProfile, mockLearningPath, mockAssessments, homeStats, agentStatusList } from '../data/mockData';
 
 const { Title, Text } = Typography;
 
@@ -35,7 +35,7 @@ const Home: React.FC = () => {
           <Card>
             <Statistic
               title="已生成资源"
-              value={6}
+              value={homeStats.resourcesGenerated}
               prefix={<FileTextOutlined style={{ color: '#1890ff' }} />}
             />
           </Card>
@@ -44,7 +44,7 @@ const Home: React.FC = () => {
           <Card>
             <Statistic
               title="学习效率指数"
-              value={85}
+              value={homeStats.efficiencyScore}
               suffix="分"
               prefix={<RiseOutlined style={{ color: '#faad14' }} />}
             />
@@ -54,7 +54,7 @@ const Home: React.FC = () => {
           <Card>
             <Statistic
               title="预计完成时间"
-              value={8}
+              value={homeStats.estimatedWeeks}
               suffix="周"
               prefix={<ClockCircleOutlined style={{ color: '#722ed1' }} />}
             />
@@ -132,13 +132,7 @@ const Home: React.FC = () => {
           <Card title="多智能体协作系统" bordered={false}>
             <List
               grid={{ gutter: 16, xs: 1, sm: 2, md: 5 }}
-              dataSource={[
-                { name: '画像构建智能体', desc: '分析学习特征', color: '#1890ff', active: true },
-                { name: '资源生成智能体', desc: '生成多模态资源', color: '#52c41a', active: true },
-                { name: '路径规划智能体', desc: '规划学习路径', color: '#faad14', active: true },
-                { name: '智能辅导智能体', desc: '答疑解惑', color: '#722ed1', active: false },
-                { name: '效果评估智能体', desc: '评估学习效果', color: '#eb2f96', active: false },
-              ]}
+              dataSource={agentStatusList}
               renderItem={(item) => (
                 <List.Item>
                   <Card size="small" style={{ borderTop: `3px solid ${item.color}` }}>

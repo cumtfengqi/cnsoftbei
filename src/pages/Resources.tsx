@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import { multiAgentScheduler, resourceGenerator, type AgentRole } from '../services/multiAgentFramework';
 import type { ResourceType } from '../types';
+import { resourceTypeMeta, resourceAgentDisplay } from '../data/mockData';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { usePageCache } from '../context/PageCacheContext';
 
@@ -21,15 +22,26 @@ const { TextArea } = Input;
 
 const PAGE_KEY = 'resources';
 
-// 资源类型配置
-const resourceTypeConfig: Record<ResourceType, { icon: React.ReactNode; color: string; label: string; desc: string }> = {
-  document: { icon: <FileTextOutlined />, color: '#1890ff', label: '课程文档', desc: '专业课程讲解文档、知识点解析' },
-  mindmap: { icon: <AimOutlined />, color: '#52c41a', label: '思维导图', desc: '知识点思维导图、知识体系梳理' },
-  quiz: { icon: <ThunderboltOutlined />, color: '#faad14', label: '练习题库', desc: '选择题、填空题、编程题' },
-  reading: { icon: <ReadOutlined />, color: '#722ed1', label: '拓展阅读', desc: '论文导读、拓展材料' },
-  video: { icon: <PlayCircleOutlined />, color: '#eb2f96', label: '教学视频', desc: '教学动画、算法演示' },
-  codeCase: { icon: <CodeOutlined />, color: '#13c2c2', label: '代码案例', desc: '实战项目、代码案例' },
+// 图标映射
+const iconMap: Record<string, React.ReactNode> = {
+  FileTextOutlined: <FileTextOutlined />,
+  AimOutlined: <AimOutlined />,
+  ThunderboltOutlined: <ThunderboltOutlined />,
+  ReadOutlined: <ReadOutlined />,
+  PlayCircleOutlined: <PlayCircleOutlined />,
+  CodeOutlined: <CodeOutlined />,
 };
+
+// 资源类型配置（从集中数据构建）
+const resourceTypeConfig: Record<ResourceType, { icon: React.ReactNode; color: string; label: string; desc: string }> = {} as Record<ResourceType, { icon: React.ReactNode; color: string; label: string; desc: string }>;
+for (const [key, meta] of Object.entries(resourceTypeMeta)) {
+  resourceTypeConfig[key as ResourceType] = {
+    icon: iconMap[meta.iconName] || <FileTextOutlined />,
+    color: meta.color,
+    label: meta.label,
+    desc: meta.desc,
+  };
+}
 
 // 流式内容卡片组件
 const StreamingContentCard: React.FC<{
@@ -203,13 +215,8 @@ const Resources: React.FC = () => {
       {/* 多智能体协作状态 */}
       <Card title="多智能体协作状态" style={{ marginTop: 24 }}>
         <Row gutter={16} align="middle">
-          {[
-            { name: '画像构建', desc: '分析学习需求', role: 'profile' as AgentRole },
-            { name: '资源规划', desc: '制定生成方案', role: 'resource' as AgentRole },
-            { name: '内容生成', desc: '多模态产出', role: 'resource' as AgentRole },
-            { name: '质量审核', desc: '校验与优化', role: 'assessment' as AgentRole },
-          ].map((agent, index) => {
-            const status = getAgentStatus(agent.role);
+          {resourceAgentDisplay.map((agent, index) => {
+            const status = getAgentStatus(agent.role as AgentRole);
             return (
               <React.Fragment key={agent.name}>
                 <Col span={5} style={{ textAlign: 'center' }}>

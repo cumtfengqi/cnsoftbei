@@ -9,7 +9,7 @@ import {
   AimOutlined,
   LoadingOutlined,
 } from '@ant-design/icons';
-import { mockLearningPath, mockResources } from '../data/mockData';
+import { mockLearningPath, mockResources, smartRecommendations } from '../data/mockData';
 import { streamChatCompletion } from '../services/api';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { usePageCache } from '../context/PageCacheContext';
@@ -361,11 +361,7 @@ const Path: React.FC = () => {
           <Card title="智能推荐" style={{ marginTop: 16 }}>
             <List
               size="small"
-              dataSource={[
-                { title: '建议先完成当前阶段的学习', reason: '巩固基础，提高实战能力' },
-                { title: '推荐观看相关教学视频', reason: '视觉化学习，加深理解' },
-                { title: '下一个知识点：继续深入', reason: '核心概念，必须掌握' },
-              ]}
+              dataSource={smartRecommendations}
               renderItem={item => (
                 <List.Item>
                   <Space direction="vertical" size="small">

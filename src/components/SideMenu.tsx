@@ -8,8 +8,19 @@ import {
   DashboardOutlined,
   HomeOutlined,
 } from '@ant-design/icons';
+import { menuItems as menuData } from '../data/mockData';
 
 const { Sider } = Layout;
+
+// 图标名字符串到组件的映射
+const iconComponentMap: Record<string, React.ReactNode> = {
+  HomeOutlined: <HomeOutlined />,
+  UserOutlined: <UserOutlined />,
+  FileTextOutlined: <FileTextOutlined />,
+  AimOutlined: <AimOutlined />,
+  QuestionCircleOutlined: <QuestionCircleOutlined />,
+  DashboardOutlined: <DashboardOutlined />,
+};
 
 interface SideMenuProps {
   collapsed: boolean;
@@ -18,14 +29,11 @@ interface SideMenuProps {
 }
 
 const SideMenu: React.FC<SideMenuProps> = ({ collapsed, selectedKey, onMenuSelect }) => {
-  const items = [
-    { key: 'home', icon: <HomeOutlined />, label: '首页' },
-    { key: 'profile', icon: <UserOutlined />, label: '学习画像' },
-    { key: 'resources', icon: <FileTextOutlined />, label: '资源生成' },
-    { key: 'path', icon: <AimOutlined />, label: '学习路径' },
-    { key: 'tutor', icon: <QuestionCircleOutlined />, label: '智能辅导' },
-    { key: 'assessment', icon: <DashboardOutlined />, label: '效果评估' },
-  ];
+  const items = menuData.map(item => ({
+    key: item.key,
+    icon: iconComponentMap[item.iconName] || null,
+    label: item.label,
+  }));
 
   return (
     <Sider collapsible collapsed={collapsed} trigger={null} style={{ minHeight: '100vh' }}>

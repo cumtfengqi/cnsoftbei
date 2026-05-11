@@ -13,7 +13,7 @@ import {
   ClockCircleOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
-import { mockAssessments, mockLearningPath } from '../data/mockData';
+import { mockAssessments, mockLearningPath, learningStats, assessmentSuggestions } from '../data/mockData';
 
 const { Title, Text } = Typography;
 
@@ -44,14 +44,6 @@ const Assessment: React.FC = () => {
 
   // 计算总体评分
   const overallScore = Math.round(assessments.reduce((sum, a) => sum + a.score, 0) / assessments.length);
-
-  // 学习行为数据
-  const learningStats = [
-    { label: '本周学习时长', value: '12.5', unit: '小时', trend: 'up', trendValue: '+15%' },
-    { label: '完成练习题数', value: '86', unit: '道', trend: 'up', trendValue: '+23' },
-    { label: '资源浏览量', value: '45', unit: '个', trend: 'stable', trendValue: '0' },
-    { label: '平均正确率', value: '78', unit: '%', trend: 'up', trendValue: '+5%' },
-  ];
 
   return (
     <div style={{ padding: 24 }}>
@@ -197,38 +189,23 @@ const Assessment: React.FC = () => {
       {/* 智能调整建议 */}
       <Card title="智能调整建议" style={{ marginTop: 24 }}>
         <Timeline
-          items={[
-            {
-              color: 'blue',
-              dot: <DashboardOutlined />,
+          items={assessmentSuggestions.map(item => {
+            const dotIconMap: Record<string, React.ReactNode> = {
+              DashboardOutlined: <DashboardOutlined />,
+              CheckCircleOutlined: <CheckCircleOutlined />,
+              FireOutlined: <FireOutlined />,
+            };
+            return {
+              color: item.color,
+              dot: dotIconMap[item.dotIcon] || <DashboardOutlined />,
               children: (
                 <Space direction="vertical">
-                  <Text strong>优化学习资源推送策略</Text>
-                  <Text type="secondary">根据您最近的练习数据，系统将增加"算法设计"类题目的推送比例</Text>
+                  <Text strong>{item.title}</Text>
+                  <Text type="secondary">{item.description}</Text>
                 </Space>
               ),
-            },
-            {
-              color: 'green',
-              dot: <CheckCircleOutlined />,
-              children: (
-                <Space direction="vertical">
-                  <Text strong>学习计划调整</Text>
-                  <Text type="secondary">建议将"深度学习入门"模块的学习时间延长2天，加强基础理解</Text>
-                </Space>
-              ),
-            },
-            {
-              color: 'orange',
-              dot: <FireOutlined />,
-              children: (
-                <Space direction="vertical">
-                  <Text strong>薄弱点突破</Text>
-                  <Text type="secondary">检测到您在"多线程并发编程"方面存在较大困难，已为您生成专项练习资源</Text>
-                </Space>
-              ),
-            },
-          ]}
+            };
+          })}
         />
       </Card>
     </div>
