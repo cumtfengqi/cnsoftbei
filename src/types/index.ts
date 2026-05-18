@@ -82,6 +82,8 @@ export interface QAItem {
   type: 'text' | 'image' | 'video' | 'code';
   helpful: boolean;
   createdAt: string;
+  parentId?: string;       // 追问所属的父问题 ID
+  followUpIds?: string[];  // 该回答下的追问 ID 列表
 }
 
 // 学习效果评估
