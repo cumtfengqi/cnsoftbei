@@ -401,11 +401,24 @@ const Tutor: React.FC = () => {
             </Space>
 
             {/* 当前回答展示 */}
-            {currentAnswer && (
+            {currentAnswer && (() => {
+              const currentQA = lastGeneratedId ? history.find(h => h.id === lastGeneratedId) : null;
+              const parentQA = currentQA?.parentId ? history.find(h => h.id === currentQA.parentId) : null;
+              const displayParent = followUpParent || parentQA;
+              return (
               <div style={{ marginTop: 24, padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
+                {/* 追问关联的原始问题 */}
+                {displayParent && (
+                  <Card size="small" style={{ marginBottom: 12, background: '#fffbe6', border: '1px solid #ffe58f' }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>关联问题：</Text>
+                    <Paragraph style={{ marginTop: 4, marginBottom: 0, fontWeight: 500, fontSize: 14 }}>
+                      {displayParent.question}
+                    </Paragraph>
+                  </Card>
+                )}
                 <Space style={{ marginBottom: 8 }}>
                   <Tag color="purple">{activeMode === 'text' ? '文字解答' : activeMode === 'image' ? '图解说明' : activeMode === 'video' ? '视频讲解' : '代码示例'}</Tag>
-                  {followUpParent && <Tag color="green">追问</Tag>}
+                  {displayParent && <Tag color="green">追问</Tag>}
                   {isGenerating && <Tag color="processing" icon={<LoadingOutlined />}>生成中</Tag>}
                 </Space>
                 <div ref={answerRef as any} style={{ maxHeight: 400, overflow: 'auto', padding: 16, borderRadius: 8, background: '#fff' }}>
@@ -413,7 +426,8 @@ const Tutor: React.FC = () => {
                   {isGenerating && <span style={{ animation: 'blink 1s infinite', marginLeft: 4 }}>|</span>}
                 </div>
               </div>
-            )}
+              );
+            })()}
 
             {isGenerating && !currentAnswer && (
               <div style={{ textAlign: 'center', padding: 40 }}>
