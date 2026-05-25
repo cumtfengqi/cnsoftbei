@@ -3,7 +3,9 @@
     "allow": [
       "mcp__fetch__fetch",
       "Read(//g/GSave/Grogramming/React/**)",
-      "Bash(npm create:*)"
+      "Bash(npm create:*)",
+      "Bash(npm run *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

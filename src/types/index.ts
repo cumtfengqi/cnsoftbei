@@ -51,7 +51,7 @@ export interface LearningNode {
   title: string;
   description: string;
   resources?: LearningResource[];
-  status: 'pending' | 'in-progress' | 'completed';
+  status: 'locked' | 'in-progress' | 'completed';
   progress: number;
   estimatedHours?: number;
 }
@@ -82,6 +82,9 @@ export interface QAItem {
   type: 'text' | 'image' | 'video' | 'code';
   helpful: boolean;
   createdAt: string;
+  parentId?: string;       // 追问所属的父问题 ID
+  followUpIds?: string[];  // 该回答下的追问 ID 列表
+  cancelled?: boolean;     // 是否已被用户取消生成
 }
 
 // 学习效果评估
