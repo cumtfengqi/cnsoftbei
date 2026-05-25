@@ -41,7 +41,8 @@ export type StreamingCallback = (chunk: string, isThinking: boolean) => void;
 export async function streamChatCompletion(
   messages: ChatMessage[],
   onChunk?: StreamingCallback,
-  onThinking?: (thinking: string) => void
+  onThinking?: (thinking: string) => void,
+  signal?: AbortSignal,
 ): Promise<string> {
   const anthropicMessages = messages
     .filter(m => m.role !== 'system')
@@ -70,6 +71,7 @@ export async function streamChatCompletion(
         'Authorization': `Bearer ${API_KEY}`,
       },
       body: JSON.stringify(requestData),
+      signal,
     });
 
     if (!response.ok) {

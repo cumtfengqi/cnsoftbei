@@ -41,8 +41,8 @@
     "nodes": [
       { "id": "node-001", "title": "Python高级编程", "description": "掌握装饰器、生成器、上下文管理器", "status": "completed", "progress": 100 },
       { "id": "node-002", "title": "机器学习基础", "description": "理解监督学习、无监督学习核心算法", "status": "in-progress", "progress": 60 },
-      { "id": "node-003", "title": "深度学习入门", "description": "神经网络原理、激活函数、损失函数", "status": "pending", "progress": 0 },
-      { "id": "node-004", "title": "神经网络实战", "description": "PyTorch/TensorFlow实战项目", "status": "pending", "progress": 0 }
+      { "id": "node-003", "title": "深度学习入门", "description": "神经网络原理、激活函数、损失函数", "status": "locked", "progress": 0 },
+      { "id": "node-004", "title": "神经网络实战", "description": "PyTorch/TensorFlow实战项目", "status": "locked", "progress": 0 }
     ]
   },
 

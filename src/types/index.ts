@@ -51,7 +51,7 @@ export interface LearningNode {
   title: string;
   description: string;
   resources?: LearningResource[];
-  status: 'pending' | 'in-progress' | 'completed';
+  status: 'locked' | 'in-progress' | 'completed';
   progress: number;
   estimatedHours?: number;
 }

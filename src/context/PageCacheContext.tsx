@@ -10,21 +10,40 @@ interface PageCacheContextType {
   clearState: (pageKey: string) => void;
 }
 
+const SESSION_KEY_PREFIX = 'page_cache_';
+
 const PageCacheContext = createContext<PageCacheContextType | null>(null);
 
 export const PageCacheProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const cacheRef = useRef<PageState>({});
 
   const getState = useCallback((pageKey: string) => {
-    return cacheRef.current[pageKey];
+    if (cacheRef.current[pageKey] !== undefined) {
+      return cacheRef.current[pageKey];
+    }
+    try {
+      const stored = sessionStorage.getItem(SESSION_KEY_PREFIX + pageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        cacheRef.current[pageKey] = parsed;
+        return parsed;
+      }
+    } catch {}
+    return undefined;
   }, []);
 
   const setState = useCallback((pageKey: string, state: any) => {
     cacheRef.current[pageKey] = state;
+    try {
+      sessionStorage.setItem(SESSION_KEY_PREFIX + pageKey, JSON.stringify(state));
+    } catch {}
   }, []);
 
   const clearState = useCallback((pageKey: string) => {
     delete cacheRef.current[pageKey];
+    try {
+      sessionStorage.removeItem(SESSION_KEY_PREFIX + pageKey);
+    } catch {}
   }, []);
 
   return (
