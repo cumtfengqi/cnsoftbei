@@ -14,7 +14,7 @@ import {
   CloseCircleOutlined,
   MessageOutlined,
 } from '@ant-design/icons';
-import { streamChatCompletion } from '../services/api';
+import { streamChatCompletion, chatCompletion } from '../services/api';
 import { defaultTutorHistory, tutorQuickQuestions } from '../data/mockData';
 import type { QAItem, StudentProfile } from '../types';
 import MarkdownRenderer from '../components/MarkdownRenderer';
@@ -24,6 +24,12 @@ const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
 const PAGE_KEY = 'tutor';
+
+// 模块级引用，确保跨页面切换时后台生成不中断
+const abortRef: { current: AbortController | null } = { current: null };
+let pendingHistory: QAItem[] | null = null;
+let pendingLastGeneratedId: string | null = null;
+let pendingQuickCache: Record<string, string> | null = null;
 
 function loadProfile(): StudentProfile | null {
   try {
@@ -56,7 +62,7 @@ const Tutor: React.FC = () => {
   const { cachedState, saveState } = usePageCache(PAGE_KEY);
 
   const [question, setQuestion] = useState(() => cachedState?.question ?? '');
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(() => cachedState?.isGenerating ?? false);
   const [currentAnswer, setCurrentAnswer] = useState(() => cachedState?.currentAnswer ?? '');
   const [activeMode, setActiveMode] = useState<'text' | 'image' | 'video' | 'code'>(() => cachedState?.activeMode ?? 'text');
   const [history, setHistory] = useState<QAItem[]>(() => cachedState?.history ?? defaultTutorHistory);
@@ -68,12 +74,22 @@ const Tutor: React.FC = () => {
   // 追问状态：从历史点击追问时设置，不清理当前回答
   const [followUpParent, setFollowUpParent] = useState<QAItem | null>(() => cachedState?.followUpParent ?? null);
 
-  const abortRef = useRef<AbortController | null>(null);
   const answerRef = useRef<HTMLDivElement>(null);
+  const saveStateRef = useRef(saveState);
+  saveStateRef.current = saveState;
+
+  // 直接将进度写入页面缓存，确保跨页面切换不丢失
+  const persistProgress = (overrides: Record<string, any>) => {
+    saveStateRef.current({
+      question, currentAnswer, activeMode, history, feedbackMap, quickCache,
+      regeneratingId, followUpParent, lastGeneratedId, isGenerating,
+      ...overrides,
+    });
+  };
 
   useEffect(() => {
-    saveState({ question, currentAnswer, activeMode, history, feedbackMap, quickCache, regeneratingId, followUpParent, lastGeneratedId });
-  }, [question, currentAnswer, activeMode, history, feedbackMap, quickCache, regeneratingId, followUpParent, lastGeneratedId, saveState]);
+    saveState({ question, currentAnswer, activeMode, history, feedbackMap, quickCache, regeneratingId, followUpParent, lastGeneratedId, isGenerating });
+  }, [question, currentAnswer, activeMode, history, feedbackMap, quickCache, regeneratingId, followUpParent, lastGeneratedId, isGenerating, saveState]);
 
   useEffect(() => {
     if (currentAnswer && answerRef.current) {
@@ -88,6 +104,8 @@ const Tutor: React.FC = () => {
   const handleCancel = () => {
     abortRef.current?.abort();
     abortRef.current = null;
+    setIsGenerating(false);
+    persistProgress({ isGenerating: false });
   };
 
   // 解析上下文：自动检测用户输入是否与当前回答有关
@@ -104,13 +122,44 @@ const Tutor: React.FC = () => {
     return null;
   };
 
+  // AI 判断新问题是否与上一个问答相关
+  const checkRelevance = async (newQuestion: string, prevQA: QAItem): Promise<boolean> => {
+    try {
+      const messages = [
+        {
+          role: 'system' as const,
+          content: '你是一个问题相关性判断助手。判断用户的新问题是否与之前讨论的主题相关。仅回复"相关"或"无关"，不要输出其他任何内容。',
+        },
+        {
+          role: 'user' as const,
+          content: `之前的问题：${prevQA.question}\n之前的回答主题：${prevQA.answer.substring(0, 500)}\n\n新问题：${newQuestion}\n\n这两个问题是否属于同一主题？回复"相关"或"无关"。`,
+        },
+      ];
+      const result = await chatCompletion(messages);
+      return result.includes('相关') && !result.includes('无关');
+    } catch {
+      return false; // 判断失败时默认视为不相关，作为新问题处理
+    }
+  };
+
   const handleAsk = useCallback(async (inputQuestion?: string, parentQA?: QAItem | null) => {
     const q = (inputQuestion ?? question).trim();
     if (!q) return;
     if (isGenerating) return;
+    setIsGenerating(true);
 
     const contextParent = resolveContext(parentQA);
-    const isFollowUp = !!contextParent;
+    let isFollowUp = !!contextParent;
+
+    // 有潜在上下文时，让 AI 判断是否真正相关
+    if (contextParent) {
+      const relevant = await checkRelevance(q, contextParent);
+      if (!relevant) {
+        isFollowUp = false;
+        // 清除追问状态，把当前输入当作新问题
+        if (followUpParent) setFollowUpParent(null);
+      }
+    }
 
     // 非追问时检查历史缓存
     if (!isFollowUp) {
@@ -124,18 +173,19 @@ const Tutor: React.FC = () => {
           setLastGeneratedId(existing.id);
           setFollowUpParent(null);
           setHistory(prev => [existing, ...prev.filter((_, i) => i !== existingIndex)]);
+          setIsGenerating(false);
           return;
         }
 
         // 曾被点踩：重新生成
         if (!inputQuestion) setQuestion('');
-        setIsGenerating(true);
         setCurrentAnswer('');
         setRegeneratingId(existing.id);
 
         const controller = new AbortController();
         abortRef.current = controller;
 
+        let fullResponse = '';
         try {
           const oldAnswer = existing.answer;
           const messages = [
@@ -157,32 +207,70 @@ const Tutor: React.FC = () => {
             },
           ];
 
-          let fullResponse = '';
+          fullResponse = '';
           await streamChatCompletion(
             messages,
-            (chunk, isThinking) => { if (!isThinking) { fullResponse += chunk; setCurrentAnswer(fullResponse); } },
+            (chunk, isThinking) => { if (!isThinking) { fullResponse += chunk; setCurrentAnswer(fullResponse); persistProgress({ isGenerating: true, currentAnswer: fullResponse }); } },
             () => {},
             controller.signal,
           );
 
           const newAnswer = fullResponse || '重新生成失败';
           setLastGeneratedId(existing.id);
-          setHistory(prev => {
-            const idx = prev.findIndex(item => item.id === existing.id);
-            if (idx < 0) return prev;
-            const updated: QAItem = { ...prev[idx], answer: newAnswer, helpful: false, createdAt: new Date().toISOString() };
-            return [updated, ...prev.filter((_, i) => i !== idx)];
-          });
-          setFeedbackMap(prev => ({ ...prev, [existing.id]: null }));
-          setQuickCache(prev => ({ ...prev, [cacheKey(existing.question, existing.type)]: newAnswer }));
+
+          const idx = history.findIndex(item => item.id === existing.id);
+          let newHistory: QAItem[];
+          if (idx >= 0) {
+            const updated: QAItem = { ...history[idx], answer: newAnswer, helpful: false, createdAt: new Date().toISOString() };
+            newHistory = [updated, ...history.filter((_, i) => i !== idx)];
+          } else {
+            newHistory = history;
+          }
+          setHistory(newHistory);
+
+          const newFeedbackMap = { ...feedbackMap, [existing.id]: null as 'like' | 'dislike' | null };
+          setFeedbackMap(newFeedbackMap);
+
+          const newQuickCache = { ...quickCache, [cacheKey(existing.question, existing.type)]: newAnswer };
+          setQuickCache(newQuickCache);
+
+          pendingHistory = newHistory;
+          pendingLastGeneratedId = existing.id;
+          pendingQuickCache = newQuickCache;
+
           message.success('已根据您的反馈重新生成回答');
         } catch (error: any) {
-          if (error.name === 'AbortError') message.info('已取消生成');
+          if (error.name === 'AbortError') {
+            message.info('已取消生成');
+            const cancelledAnswer = fullResponse || '（已取消）';
+            setLastGeneratedId(existing.id);
+            const idx = history.findIndex(item => item.id === existing.id);
+            let newHistory: QAItem[];
+            if (idx >= 0) {
+              const updated: QAItem = { ...history[idx], answer: cancelledAnswer, helpful: false, cancelled: true, createdAt: new Date().toISOString() };
+              newHistory = [updated, ...history.filter((_, i) => i !== idx)];
+            } else {
+              newHistory = history;
+            }
+            setHistory(newHistory);
+            pendingHistory = newHistory;
+            pendingLastGeneratedId = existing.id;
+          }
           else { console.error('Regeneration failed:', error); message.error('重新生成失败'); }
         } finally {
           setIsGenerating(false);
           setRegeneratingId(null);
           abortRef.current = null;
+          persistProgress({
+            isGenerating: false,
+            regeneratingId: null,
+            currentAnswer: fullResponse,
+            ...(pendingHistory ? { history: pendingHistory, lastGeneratedId: pendingLastGeneratedId } : {}),
+            ...(pendingQuickCache ? { quickCache: pendingQuickCache } : {}),
+          });
+          pendingHistory = null;
+          pendingLastGeneratedId = null;
+          pendingQuickCache = null;
         }
         return;
       }
@@ -192,22 +280,20 @@ const Tutor: React.FC = () => {
       const cached = quickCache[key];
       if (cached) {
         setCurrentAnswer(cached);
-        const qaId = `qa-${Date.now()}`;
-        setLastGeneratedId(qaId);
         setFollowUpParent(null);
-        setHistory(prev => [{ id: qaId, question: q, answer: cached, type: activeMode, helpful: false, createdAt: new Date().toISOString() }, ...prev]);
+        setIsGenerating(false);
         message.success('已从缓存加载');
         return;
       }
     }
 
     if (!inputQuestion) setQuestion('');
-    setIsGenerating(true);
     setCurrentAnswer('');
 
     const controller = new AbortController();
     abortRef.current = controller;
 
+    let fullAnswer = '';
     try {
       const modePrompts: Record<string, string> = {
         text: '你是一位专业的AI辅导老师，请详细解答用户的问题。用清晰的结构回答，包含必要的解释和示例。',
@@ -234,55 +320,102 @@ const Tutor: React.FC = () => {
         { role: 'user' as const, content: userContent },
       ];
 
-      let fullAnswer = '';
+      fullAnswer = '';
       await streamChatCompletion(
         messages,
-        (chunk, isThinking) => { if (!isThinking) { fullAnswer += chunk; setCurrentAnswer(fullAnswer); } },
+        (chunk, isThinking) => { if (!isThinking) { fullAnswer += chunk; setCurrentAnswer(fullAnswer); persistProgress({ isGenerating: true, currentAnswer: fullAnswer }); } },
         () => {},
         controller.signal,
       );
 
+      // 构建新的快速缓存
+      let newQuickCache = quickCache;
       if (!isFollowUp) {
-        setQuickCache(prev => ({ ...prev, [cacheKey(q, activeMode)]: fullAnswer }));
+        newQuickCache = { ...quickCache, [cacheKey(q, activeMode)]: fullAnswer };
+        setQuickCache(newQuickCache);
       }
 
+      // 构建新的 QA 和历史记录
       const qaId = `qa-${Date.now()}`;
-      setLastGeneratedId(qaId);
+      const newQA: QAItem = {
+        id: qaId,
+        question: q,
+        answer: fullAnswer,
+        type: activeMode as 'text' | 'image' | 'video' | 'code',
+        helpful: false,
+        createdAt: new Date().toISOString(),
+      };
 
-      setHistory(prev => {
-        const newQA: QAItem = {
-          id: qaId,
-          question: q,
-          answer: fullAnswer,
-          type: activeMode as 'text' | 'image' | 'video' | 'code',
-          helpful: false,
-          createdAt: new Date().toISOString(),
-        };
-
-        if (isFollowUp && contextParent) {
-          newQA.parentId = contextParent.id;
-          return prev.map(item =>
-            item.id === contextParent.id
-              ? { ...item, followUpIds: [...(item.followUpIds || []), newQA.id] }
-              : item
-          ).concat([newQA]);
+      let newHistory: QAItem[];
+      if (isFollowUp && contextParent) {
+        newQA.parentId = contextParent.id;
+        newHistory = history.map(item =>
+          item.id === contextParent.id
+            ? { ...item, followUpIds: [...(item.followUpIds || []), newQA.id] }
+            : item
+        ).concat([newQA]);
+      } else {
+        const dup = history.findIndex(item => item.question === q && item.type === activeMode && !item.parentId);
+        if (dup >= 0) {
+          newHistory = [history[dup], ...history.filter((_, i) => i !== dup)];
+        } else {
+          newHistory = [newQA, ...history];
         }
+      }
 
-        const dup = prev.findIndex(item => item.question === q && item.type === activeMode && !item.parentId);
-        if (dup >= 0) return [prev[dup], ...prev.filter((_, i) => i !== dup)];
-        return [newQA, ...prev];
-      });
+      setLastGeneratedId(qaId);
+      setHistory(newHistory);
+      pendingHistory = newHistory;
+      pendingLastGeneratedId = qaId;
+      pendingQuickCache = newQuickCache;
 
       // 追问完成后清除追问状态
       if (followUpParent) setFollowUpParent(null);
 
       message.success(isFollowUp ? '已回复' : '解答完成！');
     } catch (error: any) {
-      if (error.name === 'AbortError') message.info('已取消生成');
+      if (error.name === 'AbortError') {
+        message.info('已取消生成');
+        const qaId = `qa-${Date.now()}`;
+        const cancelledQA: QAItem = {
+          id: qaId,
+          question: q,
+          answer: fullAnswer || '（已取消）',
+          type: activeMode as 'text' | 'image' | 'video' | 'code',
+          helpful: false,
+          cancelled: true,
+          createdAt: new Date().toISOString(),
+        };
+        let newHistory: QAItem[];
+        if (isFollowUp && contextParent) {
+          cancelledQA.parentId = contextParent.id;
+          newHistory = history.map(item =>
+            item.id === contextParent.id
+              ? { ...item, followUpIds: [...(item.followUpIds || []), cancelledQA.id] }
+              : item
+          ).concat([cancelledQA]);
+        } else {
+          newHistory = [cancelledQA, ...history];
+        }
+        setHistory(newHistory);
+        setLastGeneratedId(qaId);
+        pendingHistory = newHistory;
+        pendingLastGeneratedId = qaId;
+        if (followUpParent) setFollowUpParent(null);
+      }
       else { console.error('Tutor failed:', error); message.error('解答失败：' + error.message); }
     } finally {
       setIsGenerating(false);
       abortRef.current = null;
+      persistProgress({
+        isGenerating: false,
+        currentAnswer: fullAnswer,
+        ...(pendingHistory ? { history: pendingHistory, lastGeneratedId: pendingLastGeneratedId } : {}),
+        ...(pendingQuickCache ? { quickCache: pendingQuickCache } : {}),
+      });
+      pendingHistory = null;
+      pendingLastGeneratedId = null;
+      pendingQuickCache = null;
     }
   }, [question, isGenerating, activeMode, quickCache, history, feedbackMap, followUpParent, profileCtx, lastGeneratedId, currentAnswer]);
 
@@ -419,6 +552,7 @@ const Tutor: React.FC = () => {
                 <Space style={{ marginBottom: 8 }}>
                   <Tag color="purple">{activeMode === 'text' ? '文字解答' : activeMode === 'image' ? '图解说明' : activeMode === 'video' ? '视频讲解' : '代码示例'}</Tag>
                   {displayParent && <Tag color="green">追问</Tag>}
+                  {currentQA?.cancelled && <Tag color="default">已取消</Tag>}
                   {isGenerating && <Tag color="processing" icon={<LoadingOutlined />}>生成中</Tag>}
                 </Space>
                 <div ref={answerRef as any} style={{ maxHeight: 400, overflow: 'auto', padding: 16, borderRadius: 8, background: '#fff' }}>
@@ -452,9 +586,8 @@ const Tutor: React.FC = () => {
                     <Button type="link" size="small"
                       onClick={() => { setQuestion(item); setFollowUpParent(null); if (hasCached) handleAsk(item); }}
                       disabled={isGenerating}
-                      style={{ textAlign: 'left', width: '100%', justifyContent: 'flex-start' }}>
+                      style={{ textAlign: 'left', width: '100%', justifyContent: 'flex-start', color: hasCached ? '#722ed1' : undefined }}>
                       {item}
-                      {hasCached && <Tag color="success" style={{ marginLeft: 8, fontSize: 10, lineHeight: '16px' }}>已缓存</Tag>}
                     </Button>
                   </List.Item>
                 );
@@ -489,9 +622,12 @@ const Tutor: React.FC = () => {
                               {item.type === 'code' ? <CodeOutlined /> : <FileTextOutlined />}
                               <Text ellipsis style={{ maxWidth: 120, fontSize: 13 }}>{item.question}</Text>
                               {followUps.length > 0 && <Tag color="green" style={{ fontSize: 10, lineHeight: '16px' }}>{followUps.length}条追问</Tag>}
+                              {item.cancelled && <Tag color="default" style={{ fontSize: 10, lineHeight: '16px' }}>已取消</Tag>}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                              {regeneratingId === item.id ? (
+                              {item.cancelled ? (
+                                <Tag color="default" style={{ fontSize: 11, lineHeight: '18px' }}>已取消</Tag>
+                              ) : regeneratingId === item.id ? (
                                 <Tag color="processing" icon={<LoadingOutlined spin />} style={{ fontSize: 11, lineHeight: '18px' }}>重新生成中...</Tag>
                               ) : (
                                 <>
@@ -511,12 +647,14 @@ const Tutor: React.FC = () => {
                               )}
                             </div>
                           </div>
-                          <Popconfirm title="确认删除" description="确定要删除这条提问记录吗？"
-                            onConfirm={(e) => { handleDelete(item.id, e as unknown as React.MouseEvent); }}
-                            okText="删除" cancelText="取消">
-                            <Button type="text" size="small" danger icon={<DeleteOutlined />}
-                              onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }} />
-                          </Popconfirm>
+                          <span onClick={(e) => e.stopPropagation()}>
+                            <Popconfirm title="确认删除" description="确定要删除这条提问记录吗？"
+                              onConfirm={(e) => { handleDelete(item.id, e as unknown as React.MouseEvent); }}
+                              okText="删除" cancelText="取消">
+                              <Button type="text" size="small" danger icon={<DeleteOutlined />}
+                                style={{ flexShrink: 0 }} />
+                            </Popconfirm>
+                          </span>
                         </div>
                         {/* 追问子条目 */}
                         {followUps.length > 0 && (
@@ -526,11 +664,15 @@ const Tutor: React.FC = () => {
                                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 6px', cursor: 'pointer', borderRadius: 4, fontSize: 12 }}
                                 onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#f5f5f5'; }}
                                 onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}>
-                                <MessageOutlined style={{ fontSize: 11, color: '#52c41a' }} />
-                                <Text ellipsis style={{ maxWidth: 100, color: '#666' }}>{fu.question}</Text>
-                                <Tag color={fu.helpful ? 'success' : 'default'} style={{ fontSize: 10, lineHeight: '16px', marginLeft: 'auto' }}>
-                                  {fu.helpful ? '有帮助' : feedbackMap[fu.id] === 'dislike' ? '已踩' : feedbackMap[fu.id] === 'like' ? '已赞' : ''}
-                                </Tag>
+                                <MessageOutlined style={{ fontSize: 11, color: fu.cancelled ? '#999' : '#52c41a' }} />
+                                <Text ellipsis style={{ maxWidth: 100, color: fu.cancelled ? '#999' : '#666' }}>{fu.question}</Text>
+                                {fu.cancelled ? (
+                                  <Tag color="default" style={{ fontSize: 10, lineHeight: '16px', marginLeft: 'auto' }}>已取消</Tag>
+                                ) : (
+                                  <Tag color={fu.helpful ? 'success' : 'default'} style={{ fontSize: 10, lineHeight: '16px', marginLeft: 'auto' }}>
+                                    {fu.helpful ? '有帮助' : feedbackMap[fu.id] === 'dislike' ? '已踩' : feedbackMap[fu.id] === 'like' ? '已赞' : ''}
+                                  </Tag>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -552,6 +694,7 @@ const Tutor: React.FC = () => {
             {selectedQA?.type === 'code' ? <CodeOutlined /> : <FileTextOutlined />}
             <Text ellipsis style={{ maxWidth: 400 }}>提问详情</Text>
             {selectedQA?.parentId && <Tag color="green">追问</Tag>}
+            {selectedQA?.cancelled && <Tag color="default">已取消</Tag>}
           </Space>
         }
         open={!!selectedQA}
@@ -559,8 +702,10 @@ const Tutor: React.FC = () => {
         footer={
           selectedQA ? (
             <Space>
-              <Button icon={<MessageOutlined />}
-                onClick={() => { setSelectedQA(null); handleStartFollowUp(selectedQA); }}>追问</Button>
+              {!selectedQA.cancelled && (
+                <Button icon={<MessageOutlined />}
+                  onClick={() => { setSelectedQA(null); handleStartFollowUp(selectedQA); }}>追问</Button>
+              )}
               <Button onClick={() => setSelectedQA(null)}>关闭</Button>
             </Space>
           ) : null
@@ -598,8 +743,9 @@ const Tutor: React.FC = () => {
             {selectedQA.followUpIds && selectedQA.followUpIds.length > 0 && (
               <Card size="small" title={`追问 (${selectedQA.followUpIds.length})`} style={{ marginTop: 16 }}>
                 {history.filter(h => selectedQA.followUpIds?.includes(h.id)).map(fu => (
-                  <Card key={fu.id} size="small" style={{ marginBottom: 8, background: '#f6ffed', border: '1px solid #b7eb8f' }}>
+                  <Card key={fu.id} size="small" style={{ marginBottom: 8, background: fu.cancelled ? '#fafafa' : '#f6ffed', border: fu.cancelled ? '1px solid #d9d9d9' : '1px solid #b7eb8f' }}>
                     <Text strong style={{ fontSize: 13 }}>追问：{fu.question}</Text>
+                    {fu.cancelled && <Tag color="default" style={{ marginLeft: 8, fontSize: 11 }}>已取消</Tag>}
                     <div style={{ marginTop: 4, maxHeight: 120, overflow: 'auto' }}>
                       <MarkdownRenderer content={fu.answer} />
                     </div>

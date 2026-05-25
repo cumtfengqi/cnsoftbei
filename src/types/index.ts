@@ -84,6 +84,7 @@ export interface QAItem {
   createdAt: string;
   parentId?: string;       // 追问所属的父问题 ID
   followUpIds?: string[];  // 该回答下的追问 ID 列表
+  cancelled?: boolean;     // 是否已被用户取消生成
 }
 
 // 学习效果评估
