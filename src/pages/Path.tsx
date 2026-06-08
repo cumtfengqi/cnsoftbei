@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Card, Typography, Tag, Space, Button, Row, Col, Steps, Progress, List, Avatar, Collapse, Modal, message } from 'antd';
+import { Card, Typography, Tag, Space, Button, Row, Col, Steps, Progress, List, Avatar, Collapse, Modal, message, Alert } from 'antd';
 import {
   ClockCircleOutlined,
   CheckCircleOutlined,
@@ -11,12 +11,19 @@ import {
   CloseOutlined,
   LockOutlined,
   EyeOutlined,
+  UnlockOutlined,
+  TrophyOutlined,
 } from '@ant-design/icons';
-import { mockLearningPath, mockResources, smartRecommendations } from '../data/mockData';
+import { mockResources, smartRecommendations } from '../data/mockData';
 import { streamChatCompletion } from '../services/api';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { usePageCache } from '../context/PageCacheContext';
 import type { LearningPath, LearningNode } from '../types';
+import {
+  getOrCreatePathState,
+  loadPathState,
+  loadThreshold,
+} from '../services/pathStateService';
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
@@ -26,7 +33,12 @@ const PAGE_KEY = 'path';
 const Path: React.FC<{ onNavigate?: (key: string) => void }> = ({ onNavigate }) => {
   const { cachedState, saveState } = usePageCache(PAGE_KEY);
 
-  const [pathData, setPathData] = useState<LearningPath>(() => {
+    const [pathData, setPathData] = useState<LearningPath>(() => {
+    // 优先从 pathStateService 读取（Practice 页面修改的持久化数据）
+    const stored = loadPathState();
+    if (stored) return stored;
+
+    // 其次从页面缓存读取
     const cached = cachedState?.pathData;
     if (cached) {
       return {
@@ -37,15 +49,38 @@ const Path: React.FC<{ onNavigate?: (key: string) => void }> = ({ onNavigate }) 
         })),
       };
     }
-    return mockLearningPath;
+    return getOrCreatePathState();
   });
-  const [activeNode, setActiveNode] = useState<string>(() => cachedState?.activeNode ?? mockLearningPath.currentNodeId);
+  const [activeNode, setActiveNode] = useState<string>(() => cachedState?.activeNode ?? pathData.currentNodeId);
   const [isPlanning, setIsPlanning] = useState<boolean>(() => cachedState?.isPlanning ?? false);
   const [planningResult, setPlanningResult] = useState<string | null>(() => cachedState?.planningResult ?? null);
   const [currentPlanText, setCurrentPlanText] = useState<string>(() => cachedState?.currentPlanText ?? '');
   const [showSteps, setShowSteps] = useState(false);
   const [isChangingPath, setIsChangingPath] = useState(false);
   const [skipModalNode, setSkipModalNode] = useState<{ id: string; title: string } | null>(null);
+
+  // 监听 pathStateUpdated 事件（来自 Practice 页面的解锁操作）
+  useEffect(() => {
+    const handler = () => {
+      const stored = loadPathState();
+      if (stored) {
+        setPathData(stored);
+        setActiveNode(stored.currentNodeId);
+        // 同步保存到页面缓存
+        saveState({
+          pathData: stored,
+          activeNode: stored.currentNodeId,
+          isPlanning,
+          planningResult,
+          currentPlanText,
+        });
+      }
+    };
+    window.addEventListener('pathStateUpdated', handler);
+    return () => window.removeEventListener('pathStateUpdated', handler);
+  }, [isPlanning, planningResult, currentPlanText, saveState]);
+
+  const threshold = loadThreshold();
 
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -347,7 +382,7 @@ const Path: React.FC<{ onNavigate?: (key: string) => void }> = ({ onNavigate }) 
         </Card>
       )}
 
-      {/* 路径概览 */}
+            {/* 路径概览 */}
       <Card style={{ marginTop: 24 }}>
         <Row gutter={24}>
           <Col span={16}>
@@ -373,6 +408,24 @@ const Path: React.FC<{ onNavigate?: (key: string) => void }> = ({ onNavigate }) 
             </Row>
           </Col>
         </Row>
+        {/* 解锁条件提示 */}
+        <Alert
+          type="info"
+          showIcon
+          icon={<UnlockOutlined />}
+          style={{ marginTop: 12 }}
+          message={
+            <Text style={{ fontSize: 13 }}>
+              前往「练习中心」答题达到
+              <Text strong> {threshold.minQuestions} 题</Text> 且正确率 ≥
+              <Text strong> {threshold.minAccuracy}%</Text> 后，
+              可通过按钮自主完成当前阶段并解锁下一章。
+              <Button type="link" size="small" onClick={() => onNavigate?.('practice')} style={{ padding: '0 4px' }}>
+                去练习 →
+              </Button>
+            </Text>
+          }
+        />
       </Card>
 
       {/* 学习步骤可视化 */}
